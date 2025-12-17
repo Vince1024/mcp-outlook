@@ -353,6 +353,66 @@ Found 3 contacts from Acme Corp:
 
 ---
 
+### Example 11: Learn Email Formatting Preferences
+
+**User**: "What are my email formatting preferences?"
+
+**AI Assistant**:
+```
+I'll analyze your recent sent emails to learn your formatting preferences.
+```
+
+**Tool Call**:
+```json
+{
+  "tool": "learn_user_email_preferences",
+  "arguments": {
+    "sample_size": 3
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "preferences": {
+    "font_family": "InspireTWDC",
+    "font_color": "#004080",
+    "font_size": "12.0pt",
+    "confidence": 0.93
+  },
+  "analyzed_emails": 3,
+  "detection_details": {
+    "fonts_found": 3,
+    "colors_found": 1,
+    "sizes_found": 1
+  }
+}
+```
+
+**AI Response**:
+```
+Based on your last 3 sent emails, here are your formatting preferences:
+
+📝 Font: InspireTWDC
+🎨 Color: #004080 (Disney Blue)
+📏 Size: 12pt
+✅ Confidence: 93% (very consistent)
+
+I can now format automated emails to match your personal style!
+```
+
+**Follow-up Use Case**:
+```
+User: "Send an email to the team about tomorrow's meeting, using my formatting"
+
+AI: *Uses learned preferences to format the email with InspireTWDC font, 
+     #004080 color, and 12pt size*
+```
+
+---
+
 ## 🔄 Complex Workflows
 
 ### Workflow 1: Morning Briefing

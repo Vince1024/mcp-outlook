@@ -1,6 +1,6 @@
 # Complete Documentation - MCP Outlook
 
-Complete technical documentation for MCP Outlook v1.2.1
+Complete technical documentation for MCP Outlook v1.2.2
 
 ## Table of Contents
 
@@ -582,6 +582,85 @@ send_email_with_attachments(
 - All files must exist
 - Absolute paths recommended
 - Large files can slow sending
+
+---
+
+### `learn_user_email_preferences`
+
+Automatically learns user's email formatting preferences by analyzing recent sent emails.
+
+This tool provides intelligent detection of your default email formatting (font family, color, and size) by analyzing the HTML structure of your recent sent emails. It's designed to help AI assistants format emails consistently with your personal style.
+
+#### Parameters
+
+- `sample_size` (int, optional): Number of recent sent emails to analyze
+  - Default: 3
+  - Range: 1-10
+  - Higher values provide more accurate detection but take longer
+
+#### Return
+
+```json
+{
+  "success": true,
+  "preferences": {
+    "font_family": "InspireTWDC",
+    "font_color": "#004080",
+    "font_size": "12.0pt",
+    "confidence": 0.93
+  },
+  "analyzed_emails": 3,
+  "detection_details": {
+    "fonts_found": 3,
+    "colors_found": 1,
+    "sizes_found": 1
+  }
+}
+```
+
+#### How It Works
+
+1. **Retrieves** the specified number of recent sent emails
+2. **Extracts** the main body content (excludes signature)
+3. **Analyzes** HTML and CSS formatting:
+   - Font family (prioritizes custom fonts like InspireTWDC)
+   - Font color (hex format like #004080)
+   - Font size (detects from CSS MsoNormal class and inline styles)
+4. **Weights** CSS-defined styles more heavily (they represent defaults)
+5. **Calculates** confidence based on formatting consistency
+
+#### Smart Detection Features
+
+- **Signature Exclusion**: Automatically detects and excludes signature formatting (which may differ from body formatting)
+- **CSS-Aware**: Prioritizes Outlook's `p.MsoNormal` CSS class (your default paragraph style)
+- **Weighted Detection**: CSS-defined font sizes are weighted 5x to ensure default formatting is detected
+- **Font Filtering**: Ignores generic fonts (Arial, Calibri) to find your custom font
+- **Confidence Score**: 0.0-1.0 score indicating how consistent your formatting is
+
+#### Example
+
+```python
+# Analyze last 3 emails
+learn_user_email_preferences(sample_size=3)
+
+# Analyze more emails for better accuracy
+learn_user_email_preferences(sample_size=5)
+```
+
+#### Use Cases
+
+- **Automated Email Formatting**: Use detected preferences to format AI-generated emails
+- **Style Consistency**: Ensure all automated emails match your personal style
+- **Template Creation**: Create email templates with your exact formatting
+- **Preference Discovery**: Understand your own email formatting habits
+
+#### Notes
+
+- Requires at least 1 sent email with HTML formatting
+- Works best with consistent email formatting
+- Analyzes only your own email body (not quoted replies)
+- Higher confidence (>0.8) indicates very consistent formatting
+- If confidence is low (<0.5), consider manually specifying preferences
 
 ---
 
@@ -1418,7 +1497,7 @@ When creating an issue, include:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed history.
 
-### Current Version: 1.2.1
+### Current Version: 1.2.2
 
 **Latest Changes**:
 - All documentation translated to English
@@ -1485,7 +1564,7 @@ IMPORTANCE_HIGH = 2
 
 ---
 
-**Version**: 1.2.1  
+**Version**: 1.2.2  
 **Date**: December 17, 2025  
 **Author**: MCP Outlook Contributors  
 **License**: MIT

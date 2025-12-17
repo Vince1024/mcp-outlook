@@ -10,6 +10,7 @@ Features:
     - Calendar management: Read, create, search events, and respond to meeting invitations
     - Contact management: Read, create, and search contacts
     - Out-of-Office management: Get and set automatic reply settings
+    - User preferences detection: Automatically learn email formatting preferences from sent emails
 
 Requirements:
     - Microsoft Outlook installed and configured on Windows
@@ -27,7 +28,7 @@ Security Notes:
     - No credentials are logged or transmitted
     - Email body content is truncated in responses to prevent data leakage
     
-Version: 1.2.0
+Version: 1.2.2
 """
 
 import json
@@ -2619,6 +2620,209 @@ def disable_out_of_office() -> str:
         
     except Exception as e:
         logger.error("Failed to disable out-of-office", exc_info=True)
+        return json.dumps({"success": False, "error": str(e)})
+
+
+# ============================================================================
+# USER PREFERENCES DETECTION
+# ============================================================================
+
+def extract_main_body_from_html(html: str) -> str:
+    """
+    Extract the main body content from HTML email, excluding signature.
+    
+    This function attempts to separate the user's actual email content from
+    the signature section, which often has different formatting.
+    
+    Args:
+        html: Full HTML body of the email
+        
+    Returns:
+        HTML containing only the main body (before signature)
+    """
+    import re
+    
+    # Strategy 1: Look for common signature markers (ordered by reliability)
+    signature_markers = [
+        r'<table[^>]*class=["\']?MsoNormalTable["\']?',  # Outlook signature table (most reliable)
+        r'<div[^>]*id=["\']?Signature["\']?',  # Outlook signature div
+        r'<div[^>]*class=["\']?signature["\']?',  # Generic signature class
+        r'\*\*\*.*?Merci de noter',  # Custom signature text
+        r'<hr[^>]*>',  # Horizontal rule often separates signature
+    ]
+    
+    # Try to find signature start position
+    signature_start = -1
+    for marker in signature_markers:
+        match = re.search(marker, html, re.IGNORECASE | re.DOTALL)
+        if match:
+            signature_start = match.start()
+            break
+    
+    # If signature found, extract content before it AND include <head> for CSS styles
+    if signature_start > 0:
+        # Keep the <head> section (contains CSS with default font sizes) + body before signature
+        head_end = html.find('</head>')
+        if head_end > 0:
+            main_body = html[:head_end + 7] + html[head_end + 7:signature_start]  # Include </head>
+        else:
+            main_body = html[:signature_start]
+    else:
+        # Strategy 2: If no signature markers found, include full content
+        main_body = html
+    
+    return main_body
+
+
+@mcp.tool()
+def learn_user_email_preferences(sample_size: int = 3) -> str:
+    """
+    Learn user's email formatting preferences by analyzing sent emails.
+    
+    This tool analyzes recent sent emails to automatically detect the user's
+    default email formatting preferences (font family, color, and size).
+    It's a smart way to understand user preferences without manual configuration.
+    
+    Args:
+        sample_size: Number of recent sent emails to analyze (default: 3, max: 10)
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "preferences": {
+                "font_family": str,
+                "font_color": str (hex format),
+                "font_size": str,
+                "confidence": float (0.0-1.0)
+            },
+            "analyzed_emails": int
+        }
+    
+    Examples:
+        >>> learn_user_email_preferences(sample_size=3)
+        {
+            "success": true,
+            "preferences": {
+                "font_family": "InspireTWDC",
+                "font_color": "#004080",
+                "font_size": "12pt",
+                "confidence": 1.0
+            },
+            "analyzed_emails": 3
+        }
+    
+    Notes:
+        - Analyzes only the user's own email body (not replies/signatures)
+        - Higher sample_size provides more accurate detection
+        - Confidence indicates how consistent the formatting is across emails
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Limit sample size
+        sample_size = min(max(1, sample_size), 10)
+        
+        # Get Sent Items folder
+        sent_folder = namespace.GetDefaultFolder(OUTLOOK_FOLDER_SENT)
+        items = sent_folder.Items
+        items.Sort("[SentOn]", True)  # Sort by sent date, descending
+        
+        # Collect formatting data from sent emails
+        import re
+        from collections import Counter
+        
+        font_families = []
+        font_colors = []
+        font_sizes = []
+        analyzed = 0
+        
+        for i in range(min(sample_size, items.Count)):
+            try:
+                mail = items[i + 1]
+                
+                if mail.BodyFormat == 2:  # HTML format
+                    html = mail.HTMLBody
+                    
+                    # IMPROVEMENT: Extract only the main body content (before signature)
+                    # This gives better detection of user's default formatting preferences
+                    main_body = extract_main_body_from_html(html)
+                    
+                    # Extract font-family (prioritize non-generic fonts)
+                    fonts = re.findall(r'font-family:\s*["\']?([^;"\']+)["\']?', main_body, re.IGNORECASE)
+                    for font in fonts:
+                        font = font.strip()
+                        # Skip generic/fallback fonts
+                        if font.lower() not in ['arial', 'sans-serif', 'serif', 'helvetica', 'calibri', 'times', 'roman', 'aptos']:
+                            font_families.append(font)
+                    
+                    # Extract color (hex format)
+                    colors = re.findall(r'color:\s*(#[0-9A-Fa-f]{6})', main_body, re.IGNORECASE)
+                    font_colors.extend(colors)
+                    
+                    # Extract font-size (both inline styles and CSS definitions)
+                    sizes = re.findall(r'font-size:\s*(\d+(?:\.\d+)?(?:pt|px))', main_body, re.IGNORECASE)
+                    
+                    # IMPORTANT: Weight CSS-defined sizes more heavily as they represent default formatting
+                    # Look specifically for MsoNormal class definition (Outlook's default paragraph style)
+                    mso_normal_match = re.search(r'p\.MsoNormal[^}]*font-size:\s*(\d+(?:\.\d+)?pt)', main_body, re.IGNORECASE)
+                    if mso_normal_match:
+                        # Add the MsoNormal font-size multiple times to give it more weight
+                        default_size = mso_normal_match.group(1)
+                        font_sizes.extend([default_size] * 5)  # Weight it 5x
+                    
+                    font_sizes.extend(sizes)
+                    
+                    analyzed += 1
+                    
+            except Exception as e:
+                logger.debug(f"Error analyzing email {i+1}: {e}")
+                continue
+        
+        if analyzed == 0:
+            return json.dumps({
+                "success": False,
+                "error": "No suitable emails found for analysis. Try sending some HTML formatted emails first."
+            })
+        
+        # Calculate most common values
+        most_common_font = Counter(font_families).most_common(1)[0] if font_families else (None, 0)
+        most_common_color = Counter(font_colors).most_common(1)[0] if font_colors else (None, 0)
+        most_common_size = Counter(font_sizes).most_common(1)[0] if font_sizes else (None, 0)
+        
+        # Calculate confidence (how consistent the formatting is)
+        # Confidence = ratio of most common value / total occurrences of that type
+        total_fonts = len(font_families)
+        total_colors = len(font_colors)
+        total_sizes = len(font_sizes)
+        
+        font_confidence = most_common_font[1] / total_fonts if total_fonts > 0 and most_common_font[0] else 0
+        color_confidence = most_common_color[1] / total_colors if total_colors > 0 and most_common_color[0] else 0
+        size_confidence = most_common_size[1] / total_sizes if total_sizes > 0 and most_common_size[0] else 0
+        
+        # Average confidence across all metrics
+        metrics_with_data = sum([1 for c in [font_confidence, color_confidence, size_confidence] if c > 0])
+        overall_confidence = (font_confidence + color_confidence + size_confidence) / metrics_with_data if metrics_with_data > 0 else 0
+        
+        return json.dumps({
+            "success": True,
+            "preferences": {
+                "font_family": most_common_font[0] or "Not detected",
+                "font_color": most_common_color[0] or "Not detected",
+                "font_size": most_common_size[0] or "Not detected",
+                "confidence": round(overall_confidence, 2)
+            },
+            "analyzed_emails": analyzed,
+            "detection_details": {
+                "fonts_found": len(set(font_families)),
+                "colors_found": len(set(font_colors)),
+                "sizes_found": len(set(font_sizes))
+            }
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to learn user preferences", exc_info=True)
         return json.dumps({"success": False, "error": str(e)})
 
 

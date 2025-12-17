@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-12-17
+
+### Added
+- **User Preferences Detection** (1 new tool)
+  - `learn_user_email_preferences` - Automatically learn user's email formatting preferences by analyzing sent emails
+  - Smart detection of font family, color, and size from recent sent emails
+  - Intelligent extraction that excludes signature formatting to detect true default preferences
+  - CSS-aware detection that prioritizes Outlook's MsoNormal style definitions
+  - Confidence score to indicate consistency of detected preferences
+  - Configurable sample size (default: 3 emails, max: 10)
+
+### Improved
+- **Email Formatting Detection Algorithm**
+  - Enhanced signature detection to exclude `<table class=MsoNormalTable>` (Outlook signature tables)
+  - Added CSS style extraction for more accurate font-size detection
+  - Weighted CSS-defined font sizes (5x weight) as they represent default formatting
+  - Filters out generic fonts (Arial, Calibri, etc.) to prioritize custom fonts
+  - Improved confidence calculation based on formatting consistency
+
 ## [1.2.1] - 2025-12-17
 
 ### Changed

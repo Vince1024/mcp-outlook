@@ -9,7 +9,7 @@
 
 A Model Context Protocol (MCP) server for Microsoft Outlook integration.
 
-**Version**: 1.2.1 | **Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) | **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) | **Examples**: [EXAMPLES.md](EXAMPLES.md)
+**Version**: 1.2.2 | **Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) | **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) | **Examples**: [EXAMPLES.md](EXAMPLES.md)
 
 ## Overview
 
@@ -19,6 +19,7 @@ This MCP server provides AI assistants with the ability to interact with Microso
 - **Calendar Management**: View, create, search calendar events, and respond to meeting invitations
 - **Contact Management**: View, create, and search contacts
 - **Out-of-Office Management**: Configure automatic reply settings
+- **User Preferences Detection**: Automatically learn email formatting preferences from sent emails
 
 ## Features
 
@@ -34,6 +35,7 @@ This MCP server provides AI assistants with the ability to interact with Microso
 - `get_email_attachments` - Get list of attachments from a specific email
 - `download_email_attachment` - Download attachment from an email to disk
 - `send_email_with_attachments` - Send emails with file attachments
+- `learn_user_email_preferences` - Automatically learn email formatting preferences from sent emails
 
 ### Calendar Tools ([Documentation](DOCUMENTATION.md#outils-calendrier))
 
