@@ -6,9 +6,10 @@ It enables AI assistants and automation tools to interact with Outlook data incl
 calendar events, and contacts.
 
 Features:
-    - Email management: Read, send, search, and create drafts
-    - Calendar management: Read, create, and search calendar events
+    - Email management: Read, send, search, create drafts, and manage attachments
+    - Calendar management: Read, create, search events, and respond to meeting invitations
     - Contact management: Read, create, and search contacts
+    - Out-of-Office management: Get and set automatic reply settings
 
 Requirements:
     - Microsoft Outlook installed and configured on Windows
@@ -26,13 +27,13 @@ Security Notes:
     - No credentials are logged or transmitted
     - Email body content is truncated in responses to prevent data leakage
     
-Version: 1.0.0
+Version: 1.2.0
 """
 
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 import win32com.client
 from dateutil import parser as date_parser
@@ -108,87 +109,56 @@ EXCLUDED_STORES = [
 _FOLDER_CACHE: Dict[str, Any] = {}  # folder_path -> Outlook Folder object
 
 
-# ============================================================================
-# SIGNATURE HELPER
-# ============================================================================
-def get_outlook_signature_via_display(mail_item, signature_name: Optional[str] = None) -> str:
-    """
-    Get the signature by displaying the mail item temporarily.
-    This allows Outlook to insert the default or specified signature naturally.
-    
-    Args:
-        mail_item: The Outlook mail item object
-        signature_name: Optional signature name (not used for now, uses default)
-        
-    Returns:
-        The HTMLBody with the signature inserted by Outlook
-    """
-    try:
-        # Display the mail item (this triggers Outlook to add the default signature)
-        # But don't show the window to the user
-        import win32com.client
-        import pythoncom
-        
-        # Get the current HTMLBody (which should now have the signature)
-        # Note: We can't easily specify which signature without displaying
-        # So we use a workaround: temporarily display to get signature
-        
-        # Get the account's default signature by inspecting the HTMLBody after Display
-        inspector = mail_item.GetInspector
-        
-        # Outlook adds signature when we access HTMLBody after calling Display
-        mail_item.Display(False)  # False = don't show window
-        signature_html = mail_item.HTMLBody
-        mail_item.Close(1)  # 1 = olDiscard, don't save changes
-        
-        return signature_html
-        
-    except Exception as e:
-        return ""
-
-
-def get_outlook_signature(signature_name: str) -> Optional[str]:
-    """
-    Load an Outlook signature by name from the signatures folder.
-    
-    Args:
-        signature_name: Name of the signature (without extension)
-        
-    Returns:
-        HTML content of the signature, or None if not found
-    """
-    import os
-    
-    # Get the user's Outlook signatures folder
-    signatures_path = os.path.join(
-        os.environ.get('APPDATA', ''),
-        'Microsoft',
-        'Signatures'
-    )
-    
-    # Try to find the signature file (with or without email suffix)
-    signature_file = os.path.join(signatures_path, f"{signature_name}.htm")
-    
-    if not os.path.exists(signature_file):
-        # Try with common suffixes
-        for file in os.listdir(signatures_path):
-            if file.startswith(signature_name) and file.endswith('.htm'):
-                signature_file = os.path.join(signatures_path, file)
-                break
-    
-    if os.path.exists(signature_file):
-        try:
-            with open(signature_file, 'r', encoding='utf-8', errors='ignore') as f:
-                return f.read()
-        except Exception as e:
-            return None
-    
-    return None
 
 
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+
+def _set_email_body(mail_item, body: str, html_body: Optional[str] = None, signature_name: Optional[str] = None):
+    """
+    Set email body with optional signature.
+    
+    Helper function to avoid code duplication between send_email and create_draft_email.
+    
+    Args:
+        mail_item: Outlook MailItem COM object
+        body: Plain text body content
+        html_body: Optional HTML body content
+        signature_name: Optional signature name to add via Display()
+        
+    Notes:
+        - If signature_name is provided, calls Display(False) to let Outlook add the signature
+        - This preserves user's Outlook format settings and signature images
+        - Outlook automatically adds ~2 blank lines before the signature (native behavior)
+    """
+    if signature_name:
+        try:
+            # Force HTML format (2 = olFormatHTML)
+            mail_item.BodyFormat = 2
+            
+            # Set the body content BEFORE Display()
+            # This allows Outlook to apply user's default format settings
+            if html_body:
+                mail_item.HTMLBody = html_body
+            else:
+                mail_item.Body = body
+            
+            # Display to add signature with user's format and embedded images
+            # Note: Outlook automatically adds spacing before the signature
+            mail_item.Display(False)  # False = don't show window
+            
+        except Exception:
+            # Fallback: set body directly without signature
+            if html_body:
+                mail_item.HTMLBody = html_body
+            else:
+                mail_item.Body = body
+    elif html_body:
+        mail_item.HTMLBody = html_body
+    else:
+        mail_item.Body = body
+
 
 def get_outlook_application():
     """
@@ -314,6 +284,18 @@ def format_email(mail_item) -> Dict[str, Any]:
         truncated_body = email_body[:EMAIL_BODY_PREVIEW_LENGTH] + "..." \
                         if len(email_body) > EMAIL_BODY_PREVIEW_LENGTH else email_body
         
+        # Format attachments list
+        attachments = []
+        try:
+            for attachment in mail_item.Attachments:
+                attachments.append({
+                    "filename": attachment.FileName,
+                    "size": attachment.Size,
+                    "type": attachment.Type  # 1=File, 5=EmbeddedItem, 6=OLE
+                })
+        except Exception:
+            pass
+        
         return {
             "subject": mail_item.Subject,
             "sender": mail_item.SenderName,
@@ -327,9 +309,11 @@ def format_email(mail_item) -> Dict[str, Any]:
             "body_length": len(email_body),
             "has_attachments": mail_item.Attachments.Count > 0,
             "attachment_count": mail_item.Attachments.Count,
+            "attachments": attachments,
             "importance": mail_item.Importance,
             "unread": mail_item.UnRead,
             "categories": mail_item.Categories,
+            "entry_id": mail_item.EntryID if hasattr(mail_item, 'EntryID') else None,
         }
     except Exception as e:
         logger.error("Failed to format email item", exc_info=True, extra={
@@ -714,13 +698,14 @@ def send_email(
         to: Recipient email address(es), semicolon-separated for multiple
             Example: "user1@example.com" or "user1@example.com; user2@example.com"
         subject: Email subject line
-        body: Email body content (plain text format, used if html_body and signature_name are not provided)
+        body: Email body content (plain text format)
         cc: CC recipients (optional), semicolon-separated
         bcc: BCC recipients (optional), semicolon-separated
         importance: Email importance level (low, normal, high) (default: normal)
         html_body: HTML body content (optional). If provided, this will be used instead of body
-        signature_name: Name of Outlook signature to use (optional). If provided, loads signature from Outlook
-            Example: "Work Signature" will load "Work Signature (user@company.com).htm" from signatures folder
+        signature_name: Name of Outlook signature to use (optional). If provided, Outlook will add the signature
+            automatically by calling Display(False). This preserves user's Outlook settings and signature images.
+            Note: Outlook adds ~2 blank lines before the signature (native behavior)
     
     Returns:
         JSON string with structure:
@@ -751,45 +736,8 @@ def send_email(
         mail.To = to
         mail.Subject = subject
         
-        # Determine the email body
-        if signature_name:
-            # Use Outlook's Display method to get signature naturally with embedded images
-            try:
-                # Display the email to let Outlook add the default signature with images
-                mail.Display(False)  # False = don't show window to user
-                
-                # Get the HTMLBody with signature (Outlook has attached inline images)
-                signature_html = mail.HTMLBody
-                
-                # DON'T close the mail - we need to keep it to preserve attached images
-                # Instead, modify the HTMLBody to add our content before the signature
-                if html_body:
-                    mail.HTMLBody = html_body + signature_html
-                else:
-                    # Convert plain text body to HTML and add before signature
-                    body_html = body.replace('\n', '<br>')
-                    mail.HTMLBody = f"<html><body><p>{body_html}</p>{signature_html}</body></html>"
-                
-                # The mail object now has our content + signature with properly attached images
-                    
-            except Exception as e:
-                # Fallback: Load signature from file
-                signature_html = get_outlook_signature(signature_name)
-                if signature_html:
-                    if html_body:
-                        mail.HTMLBody = html_body + "<br>" + signature_html
-                    else:
-                        body_html = body.replace('\n', '<br>')
-                        mail.HTMLBody = f"<html><body><p>{body_html}</p><br>{signature_html}</body></html>"
-                else:
-                    if html_body:
-                        mail.HTMLBody = html_body
-                    else:
-                        mail.Body = body
-        elif html_body:
-            mail.HTMLBody = html_body
-        else:
-            mail.Body = body
+        # Set email body (with optional signature)
+        _set_email_body(mail, body, html_body, signature_name)
         
         # Set CC and BCC recipients
         if cc:
@@ -842,12 +790,13 @@ def create_draft_email(
     Args:
         to: Recipient email address(es), semicolon-separated for multiple
         subject: Email subject line
-        body: Email body content (plain text format, used if html_body and signature_name are not provided)
+        body: Email body content (plain text format)
         cc: CC recipients (optional), semicolon-separated
         bcc: BCC recipients (optional), semicolon-separated
         html_body: HTML body content (optional). If provided, this will be used instead of body
-        signature_name: Name of Outlook signature to use (optional). If provided, loads signature from Outlook
-            Example: "Work Signature" will load "Work Signature (user@company.com).htm" from signatures folder
+        signature_name: Name of Outlook signature to use (optional). If provided, Outlook will add the signature
+            automatically by calling Display(False). This preserves user's Outlook settings and signature images.
+            Note: Outlook adds ~2 blank lines before the signature (native behavior)
     
     Returns:
         JSON string with structure:
@@ -875,45 +824,8 @@ def create_draft_email(
         mail.To = to
         mail.Subject = subject
         
-        # Determine the email body
-        if signature_name:
-            # Use Outlook's Display method to get signature naturally with embedded images
-            try:
-                # Display the email to let Outlook add the default signature with images
-                mail.Display(False)  # False = don't show window to user
-                
-                # Get the HTMLBody with signature (Outlook has attached inline images)
-                signature_html = mail.HTMLBody
-                
-                # DON'T close the mail - we need to keep it to preserve attached images
-                # Instead, modify the HTMLBody to add our content before the signature
-                if html_body:
-                    mail.HTMLBody = html_body + signature_html
-                else:
-                    # Convert plain text body to HTML and add before signature
-                    body_html = body.replace('\n', '<br>')
-                    mail.HTMLBody = f"<html><body><p>{body_html}</p>{signature_html}</body></html>"
-                
-                # The mail object now has our content + signature with properly attached images
-                    
-            except Exception as e:
-                # Fallback: Load signature from file
-                signature_html = get_outlook_signature(signature_name)
-                if signature_html:
-                    if html_body:
-                        mail.HTMLBody = html_body + "<br>" + signature_html
-                    else:
-                        body_html = body.replace('\n', '<br>')
-                        mail.HTMLBody = f"<html><body><p>{body_html}</p><br>{signature_html}</body></html>"
-                else:
-                    if html_body:
-                        mail.HTMLBody = html_body
-                    else:
-                        mail.Body = body
-        elif html_body:
-            mail.HTMLBody = html_body
-        else:
-            mail.Body = body
+        # Set email body (with optional signature)
+        _set_email_body(mail, body, html_body, signature_name)
         
         # Set CC and BCC recipients
         if cc:
@@ -931,6 +843,260 @@ def create_draft_email(
         
     except Exception as e:
         logger.error("Failed to create draft email", exc_info=True, extra={
+            "to": to,
+            "subject": subject
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def get_email_attachments(entry_id: str) -> str:
+    """
+    Get list of attachments from a specific email.
+    
+    Retrieves detailed information about all attachments in an email,
+    including filename, size, and type.
+    
+    Args:
+        entry_id: Email's EntryID (obtained from get_inbox_emails, search_emails, etc.)
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "count": int,
+            "attachments": [
+                {
+                    "filename": str,
+                    "size": int (bytes),
+                    "type": int,
+                    "index": int
+                }
+            ]
+        }
+        
+    Examples:
+        >>> get_email_attachments("00000000...")
+        {"success": true, "count": 2, "attachments": [...]}
+        
+    Notes:
+        - Type: 1=File, 5=EmbeddedItem, 6=OLE
+        - Use the index to download specific attachments with download_email_attachment
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Get the email by EntryID
+        mail_item = namespace.GetItemFromID(entry_id)
+        
+        attachments = []
+        for i, attachment in enumerate(mail_item.Attachments, start=1):
+            attachments.append({
+                "filename": attachment.FileName,
+                "size": attachment.Size,
+                "type": attachment.Type,
+                "index": i
+            })
+        
+        return json.dumps({
+            "success": True,
+            "count": len(attachments),
+            "attachments": attachments
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to get email attachments", exc_info=True, extra={
+            "entry_id": entry_id
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def download_email_attachment(entry_id: str, attachment_index: int, save_path: str) -> str:
+    """
+    Download a specific attachment from an email to disk.
+    
+    Downloads the specified attachment and saves it to the given path.
+    
+    Args:
+        entry_id: Email's EntryID
+        attachment_index: Index of the attachment (1-based, from get_email_attachments)
+        save_path: Full path where to save the attachment (e.g., "C:/Users/user/Downloads/file.pdf")
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "message": str,
+            "saved_path": str
+        }
+        
+    Examples:
+        >>> download_email_attachment("00000000...", 1, "C:/Downloads/report.pdf")
+        {"success": true, "message": "Attachment downloaded", "saved_path": "C:/Downloads/report.pdf"}
+        
+    Notes:
+        - Creates parent directories if they don't exist
+        - Overwrites existing files without warning
+        - Ensure you have write permissions to the target directory
+    """
+    try:
+        import os
+        
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Get the email by EntryID
+        mail_item = namespace.GetItemFromID(entry_id)
+        
+        # Check attachment index is valid
+        if attachment_index < 1 or attachment_index > mail_item.Attachments.Count:
+            return json.dumps({
+                "success": False,
+                "error": f"Invalid attachment index {attachment_index}. Email has {mail_item.Attachments.Count} attachment(s)"
+            })
+        
+        # Get the attachment (COM collections are 1-indexed)
+        attachment = mail_item.Attachments[attachment_index]
+        
+        # Create parent directories if they don't exist
+        os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+        
+        # Save the attachment
+        attachment.SaveAsFile(save_path)
+        
+        return json.dumps({
+            "success": True,
+            "message": f"Attachment '{attachment.FileName}' downloaded successfully",
+            "saved_path": save_path,
+            "filename": attachment.FileName,
+            "size": attachment.Size
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to download attachment", exc_info=True, extra={
+            "entry_id": entry_id,
+            "attachment_index": attachment_index,
+            "save_path": save_path
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def send_email_with_attachments(
+    to: str,
+    subject: str,
+    body: str,
+    attachments: str,
+    cc: Optional[str] = None,
+    bcc: Optional[str] = None,
+    importance: str = "normal",
+    html_body: Optional[str] = None,
+    signature_name: Optional[str] = None
+) -> str:
+    """
+    Send an email with file attachments via Outlook.
+    
+    Creates and sends an email with one or more file attachments.
+    
+    Args:
+        to: Recipient email address(es), semicolon-separated
+        subject: Email subject line
+        body: Email body content (plain text format)
+        attachments: File path(s) to attach, semicolon-separated
+            Example: "C:/file1.pdf" or "C:/file1.pdf; C:/file2.docx"
+        cc: CC recipients (optional), semicolon-separated
+        bcc: BCC recipients (optional), semicolon-separated
+        importance: Email importance level (low, normal, high) (default: normal)
+        html_body: HTML body content (optional)
+        signature_name: Name of Outlook signature to use (optional)
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "message": str,
+            "attachments_added": int
+        }
+        
+    Examples:
+        >>> send_email_with_attachments(
+        ...     "colleague@company.com",
+        ...     "Report",
+        ...     "Please find attached",
+        ...     "C:/Users/user/report.pdf"
+        ... )
+        {"success": true, "message": "Email sent", "attachments_added": 1}
+        
+    Notes:
+        - All attachment file paths must exist and be accessible
+        - Files are attached as-is (no compression or encoding)
+        - Large attachments may take time to send
+    """
+    try:
+        import os
+        
+        outlook = get_outlook_application()
+        mail = outlook.CreateItem(OUTLOOK_ITEM_MAIL)
+        
+        mail.To = to
+        mail.Subject = subject
+        
+        # Set email body (with optional signature)
+        _set_email_body(mail, body, html_body, signature_name)
+        
+        # Set CC and BCC recipients
+        if cc:
+            mail.CC = cc
+        if bcc:
+            mail.BCC = bcc
+        
+        # Set importance level
+        importance_map = {
+            "low": IMPORTANCE_LOW,
+            "normal": IMPORTANCE_NORMAL,
+            "high": IMPORTANCE_HIGH
+        }
+        mail.Importance = importance_map.get(importance.lower(), IMPORTANCE_NORMAL)
+        
+        # Add attachments
+        attachment_paths = [path.strip() for path in attachments.split(';')]
+        attachments_added = 0
+        missing_files = []
+        
+        for path in attachment_paths:
+            if not path:
+                continue
+                
+            if not os.path.exists(path):
+                missing_files.append(path)
+                continue
+            
+            try:
+                mail.Attachments.Add(path)
+                attachments_added += 1
+            except Exception as e:
+                logger.error(f"Failed to attach file: {path}", exc_info=True)
+                missing_files.append(f"{path} (error: {e})")
+        
+        if missing_files:
+            return json.dumps({
+                "success": False,
+                "error": f"Some attachment files not found or couldn't be attached: {', '.join(missing_files)}"
+            })
+        
+        # Send the email
+        mail.Send()
+        
+        return json.dumps({
+            "success": True,
+            "message": f"Email sent to {to}",
+            "attachments_added": attachments_added
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to send email with attachments", exc_info=True, extra={
             "to": to,
             "subject": subject
         })
@@ -1683,6 +1849,198 @@ def search_calendar_events(query: str, days_range: int = 30) -> str:
         return json.dumps({"success": False, "error": str(e)})
 
 
+@mcp.tool()
+def get_meeting_requests(days_range: int = 30) -> str:
+    """
+    Get pending meeting requests (invitations) that need a response.
+    
+    Retrieves meeting invitations that haven't been accepted, declined, or tentatively accepted yet.
+    
+    Args:
+        days_range: Number of days to look ahead for meeting requests (default: 30)
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "count": int,
+            "meeting_requests": [
+                {
+                    "subject": str,
+                    "organizer": str,
+                    "start": str,
+                    "end": str,
+                    "location": str,
+                    "entry_id": str,
+                    "response_status": str
+                }
+            ]
+        }
+        
+    Examples:
+        >>> get_meeting_requests(days_range=7)
+        {"success": true, "count": 3, "meeting_requests": [...]}
+        
+    Notes:
+        - Only returns meetings that haven't been responded to or are tentative
+        - Response status: 0=None, 1=Organized, 2=Tentative, 3=Accepted, 4=Declined
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        calendar = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CALENDAR)
+        
+        items = calendar.Items
+        items.Sort("[Start]")
+        items.IncludeRecurrences = True
+        
+        # Filter for upcoming meetings
+        start_date = datetime.now()
+        end_date = datetime.now() + timedelta(days=days_range)
+        
+        filter_str = f"[Start] >= '{start_date.strftime('%m/%d/%Y')}' AND [End] <= '{end_date.strftime('%m/%d/%Y')}'"
+        filtered_items = items.Restrict(filter_str)
+        
+        meeting_requests = []
+        for appointment in filtered_items:
+            try:
+                # Check if it's a meeting (has organizer) and needs response
+                # ResponseStatus: 0=None, 1=Organized, 2=Tentative, 3=Accepted, 4=Declined
+                if hasattr(appointment, 'ResponseStatus') and hasattr(appointment, 'Organizer'):
+                    response_status = appointment.ResponseStatus
+                    
+                    # Include meetings that need response (None, Tentative) but not organized by user
+                    if response_status in [0, 2] and response_status != 1:
+                        response_map = {
+                            0: "Not Responded",
+                            1: "Organized by You",
+                            2: "Tentative",
+                            3: "Accepted",
+                            4: "Declined"
+                        }
+                        
+                        meeting_requests.append({
+                            "subject": appointment.Subject,
+                            "organizer": appointment.Organizer if hasattr(appointment, 'Organizer') else None,
+                            "start": str(appointment.Start),
+                            "end": str(appointment.End),
+                            "location": appointment.Location,
+                            "body": (appointment.Body[:200] + "...") if appointment.Body and len(appointment.Body) > 200 else appointment.Body,
+                            "required_attendees": appointment.RequiredAttendees,
+                            "optional_attendees": appointment.OptionalAttendees,
+                            "entry_id": appointment.EntryID if hasattr(appointment, 'EntryID') else None,
+                            "response_status": response_map.get(response_status, "Unknown")
+                        })
+            except Exception:
+                continue
+        
+        return json.dumps({
+            "success": True,
+            "count": len(meeting_requests),
+            "meeting_requests": meeting_requests
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to get meeting requests", exc_info=True, extra={
+            "days_range": days_range
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def respond_to_meeting(entry_id: str, response: str, send_response: bool = True, comment: Optional[str] = None) -> str:
+    """
+    Respond to a meeting invitation (accept, decline, or tentative).
+    
+    Sends a response to a meeting invitation. Can optionally add a comment to the response.
+    
+    Args:
+        entry_id: Meeting's EntryID (obtained from get_meeting_requests or get_calendar_events)
+        response: Response type - "accept", "decline", or "tentative"
+        send_response: Whether to send the response to the organizer (default: True)
+            If False, updates calendar silently without notifying organizer
+        comment: Optional comment to include in the response email
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "message": str
+        }
+        
+    Examples:
+        >>> respond_to_meeting("00000000...", "accept", send_response=True)
+        {"success": true, "message": "Meeting accepted and response sent"}
+        
+        >>> respond_to_meeting("00000000...", "decline", send_response=True, comment="Conflict with another meeting")
+        {"success": true, "message": "Meeting declined and response sent"}
+        
+        >>> respond_to_meeting("00000000...", "tentative", send_response=False)
+        {"success": true, "message": "Meeting marked as tentative (no response sent)"}
+        
+    Notes:
+        - "accept" adds the meeting to your calendar as accepted
+        - "decline" removes the meeting from your calendar
+        - "tentative" marks the meeting as tentative in your calendar
+        - If send_response=True, organizer receives your response via email
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Get the meeting by EntryID
+        appointment = namespace.GetItemFromID(entry_id)
+        
+        # Validate response type
+        response_lower = response.lower()
+        if response_lower not in ["accept", "decline", "tentative"]:
+            return json.dumps({
+                "success": False,
+                "error": f"Invalid response type '{response}'. Must be 'accept', 'decline', or 'tentative'"
+            })
+        
+        # Respond to the meeting
+        # olMeetingAccepted = 3, olMeetingDeclined = 4, olMeetingTentative = 2
+        try:
+            if response_lower == "accept":
+                meeting_response = appointment.Respond(3, send_response)
+                action = "accepted"
+            elif response_lower == "decline":
+                meeting_response = appointment.Respond(4, send_response)
+                action = "declined"
+            else:  # tentative
+                meeting_response = appointment.Respond(2, send_response)
+                action = "marked as tentative"
+            
+            # Add comment if provided and response is being sent
+            if comment and send_response and meeting_response:
+                try:
+                    meeting_response.Body = comment + "\n\n" + (meeting_response.Body if meeting_response.Body else "")
+                    meeting_response.Send()
+                except Exception:
+                    pass
+            
+            response_sent_msg = " and response sent" if send_response else " (no response sent)"
+            
+            return json.dumps({
+                "success": True,
+                "message": f"Meeting {action}{response_sent_msg}"
+            }, indent=2)
+            
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Failed to respond to meeting: {e}"
+            })
+        
+    except Exception as e:
+        logger.error("Failed to respond to meeting", exc_info=True, extra={
+            "entry_id": entry_id,
+            "response": response
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
 # ============================================================================
 # CONTACT TOOLS
 # ============================================================================
@@ -1943,6 +2301,324 @@ def search_contacts(query: str) -> str:
         logger.error("Failed to search contacts", exc_info=True, extra={
             "query": query
         })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+# ============================================================================
+# OUT-OF-OFFICE TOOLS
+# ============================================================================
+
+@mcp.tool()
+def get_out_of_office_settings() -> str:
+    """
+    Get current Out-of-Office (automatic reply) settings.
+    
+    Retrieves the current automatic reply configuration, including whether it's enabled,
+    the scheduled time period, and the reply messages.
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "enabled": bool,
+            "scheduled": bool,
+            "start_time": str (if scheduled),
+            "end_time": str (if scheduled),
+            "internal_reply": str,
+            "external_reply": str,
+            "external_audience": str
+        }
+        
+    Examples:
+        >>> get_out_of_office_settings()
+        {
+            "success": true,
+            "enabled": true,
+            "scheduled": true,
+            "start_time": "2025-12-20 00:00:00",
+            "end_time": "2025-12-27 00:00:00",
+            "internal_reply": "I'm out of office...",
+            "external_reply": "I'm currently unavailable...",
+            "external_audience": "Known"
+        }
+        
+    Notes:
+        - external_audience can be: "None", "Known", or "All"
+        - "Known" means only contacts/addresses in your organization
+        - "All" means everyone who sends you an email
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Get current user's account
+        # For Outlook 2010+, use Accounts collection
+        try:
+            account = namespace.Accounts.Item(1)  # Primary account
+            
+            # Try to access AutoReplyState (not available in all Outlook versions)
+            try:
+                # olAutoReplyStateDisabled = 0, olAutoReplyStateEnabled = 1, olAutoReplyStateScheduled = 2
+                auto_reply_state = account.AutoReplyState
+                enabled = auto_reply_state > 0
+                scheduled = auto_reply_state == 2
+                
+                result = {
+                    "success": True,
+                    "enabled": enabled,
+                    "scheduled": scheduled
+                }
+                
+                # Get scheduled times if applicable
+                if scheduled:
+                    try:
+                        result["start_time"] = str(account.AutoReplyStartTime)
+                        result["end_time"] = str(account.AutoReplyEndTime)
+                    except Exception:
+                        pass
+                
+                # Get reply messages
+                try:
+                    result["internal_reply"] = account.AutoReplyTextInternal
+                    result["external_reply"] = account.AutoReplyTextExternal
+                except Exception:
+                    pass
+                
+                # Get external audience setting
+                # olExternalAudienceNone = 0, olExternalAudienceKnown = 1, olExternalAudienceAll = 2
+                try:
+                    external_audience_map = {0: "None", 1: "Known", 2: "All"}
+                    result["external_audience"] = external_audience_map.get(
+                        account.ExternalAudience, "Unknown"
+                    )
+                except Exception:
+                    result["external_audience"] = "Unknown"
+                
+                return json.dumps(result, indent=2)
+                
+            except AttributeError:
+                # AutoReplyState not available, try alternative method using CDO
+                return json.dumps({
+                    "success": False,
+                    "error": "Out-of-Office settings not accessible via COM automation on this Outlook version. "
+                            "Try using Outlook's UI or Exchange Web Services."
+                })
+                
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Failed to access account settings: {e}"
+            })
+        
+    except Exception as e:
+        logger.error("Failed to get out-of-office settings", exc_info=True)
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def set_out_of_office(
+    enabled: bool,
+    internal_reply: str,
+    external_reply: Optional[str] = None,
+    external_audience: str = "Known",
+    scheduled: bool = False,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None
+) -> str:
+    """
+    Set Out-of-Office (automatic reply) settings.
+    
+    Configures automatic replies for when you're away from the office.
+    Can be set to immediate or scheduled for a specific time period.
+    
+    Args:
+        enabled: Whether to enable automatic replies (True=on, False=off)
+        internal_reply: Message to send to internal recipients (required)
+        external_reply: Message to send to external recipients (optional, defaults to internal_reply)
+        external_audience: Who receives external replies - "None", "Known", or "All" (default: "Known")
+            - "None": No external replies
+            - "Known": Only to people in your organization/contacts
+            - "All": Everyone who emails you
+        scheduled: Whether to schedule automatic replies (True) or enable immediately (False)
+        start_time: Start date/time for scheduled replies (ISO format: "2025-12-20 00:00")
+            Required if scheduled=True
+        end_time: End date/time for scheduled replies (ISO format: "2025-12-27 00:00")
+            Required if scheduled=True
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "message": str
+        }
+        
+    Examples:
+        >>> set_out_of_office(
+        ...     enabled=True,
+        ...     internal_reply="I'm out of office until next week.",
+        ...     external_reply="I'm currently unavailable. I'll respond when I return.",
+        ...     external_audience="Known"
+        ... )
+        {"success": true, "message": "Out-of-Office enabled"}
+        
+        >>> set_out_of_office(
+        ...     enabled=True,
+        ...     internal_reply="On vacation",
+        ...     scheduled=True,
+        ...     start_time="2025-12-20 00:00",
+        ...     end_time="2025-12-27 00:00"
+        ... )
+        {"success": true, "message": "Out-of-Office scheduled"}
+        
+    Notes:
+        - If external_reply is not provided, internal_reply is used for both
+        - Scheduled replies automatically turn off after end_time
+        - This may not work on all Outlook versions (requires Outlook 2010+)
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        # Validate scheduled parameters
+        if scheduled and (not start_time or not end_time):
+            return json.dumps({
+                "success": False,
+                "error": "start_time and end_time are required when scheduled=True"
+            })
+        
+        # Use internal_reply for external if not provided
+        if external_reply is None:
+            external_reply = internal_reply
+        
+        # Validate external_audience
+        external_audience_map = {
+            "none": 0,
+            "known": 1,
+            "all": 2
+        }
+        external_audience_value = external_audience_map.get(external_audience.lower())
+        if external_audience_value is None:
+            return json.dumps({
+                "success": False,
+                "error": f"Invalid external_audience '{external_audience}'. Must be 'None', 'Known', or 'All'"
+            })
+        
+        try:
+            account = namespace.Accounts.Item(1)  # Primary account
+            
+            try:
+                # Set automatic reply state
+                # olAutoReplyStateDisabled = 0, olAutoReplyStateEnabled = 1, olAutoReplyStateScheduled = 2
+                if not enabled:
+                    account.AutoReplyState = 0  # Disabled
+                    message = "Out-of-Office disabled"
+                elif scheduled:
+                    account.AutoReplyState = 2  # Scheduled
+                    
+                    # Parse and set scheduled times
+                    try:
+                        start_dt = date_parser.parse(start_time)
+                        end_dt = date_parser.parse(end_time)
+                        account.AutoReplyStartTime = start_dt
+                        account.AutoReplyEndTime = end_dt
+                    except Exception as e:
+                        return json.dumps({
+                            "success": False,
+                            "error": f"Invalid date format: {e}. Use ISO format like '2025-12-20 00:00'"
+                        })
+                    
+                    message = f"Out-of-Office scheduled from {start_time} to {end_time}"
+                else:
+                    account.AutoReplyState = 1  # Enabled immediately
+                    message = "Out-of-Office enabled"
+                
+                # Set reply messages
+                account.AutoReplyTextInternal = internal_reply
+                account.AutoReplyTextExternal = external_reply
+                
+                # Set external audience
+                account.ExternalAudience = external_audience_value
+                
+                return json.dumps({
+                    "success": True,
+                    "message": message
+                }, indent=2)
+                
+            except AttributeError:
+                return json.dumps({
+                    "success": False,
+                    "error": "Out-of-Office settings not accessible via COM automation on this Outlook version. "
+                            "Try using Outlook's UI or Exchange Web Services."
+                })
+                
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Failed to access account settings: {e}"
+            })
+        
+    except Exception as e:
+        logger.error("Failed to set out-of-office", exc_info=True, extra={
+            "enabled": enabled,
+            "scheduled": scheduled
+        })
+        return json.dumps({"success": False, "error": str(e)})
+
+
+@mcp.tool()
+def disable_out_of_office() -> str:
+    """
+    Disable Out-of-Office (automatic reply) settings.
+    
+    Turns off automatic replies. This is a convenience function equivalent to
+    set_out_of_office(enabled=False, ...).
+    
+    Returns:
+        JSON string with structure:
+        {
+            "success": bool,
+            "message": str
+        }
+        
+    Examples:
+        >>> disable_out_of_office()
+        {"success": true, "message": "Out-of-Office disabled"}
+        
+    Notes:
+        - This only disables automatic replies, doesn't delete the messages
+        - Previous messages are preserved and can be re-enabled later
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        
+        try:
+            account = namespace.Accounts.Item(1)  # Primary account
+            
+            try:
+                # olAutoReplyStateDisabled = 0
+                account.AutoReplyState = 0
+                
+                return json.dumps({
+                    "success": True,
+                    "message": "Out-of-Office disabled"
+                }, indent=2)
+                
+            except AttributeError:
+                return json.dumps({
+                    "success": False,
+                    "error": "Out-of-Office settings not accessible via COM automation on this Outlook version. "
+                            "Try using Outlook's UI or Exchange Web Services."
+                })
+                
+        except Exception as e:
+            return json.dumps({
+                "success": False,
+                "error": f"Failed to access account settings: {e}"
+            })
+        
+    except Exception as e:
+        logger.error("Failed to disable out-of-office", exc_info=True)
         return json.dumps({"success": False, "error": str(e)})
 
 

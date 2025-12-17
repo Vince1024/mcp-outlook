@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-17
+
+### Added
+- **Attachment Management** (3 new tools)
+  - `get_email_attachments` - Get list of attachments from a specific email with details (filename, size, type, index)
+  - `download_email_attachment` - Download specific attachment from an email to disk with automatic directory creation
+  - `send_email_with_attachments` - Send emails with file attachments (single or multiple files)
+  - Enhanced `format_email()` to include detailed attachment information in email metadata
+  
+- **Meeting Response Management** (2 new tools)
+  - `get_meeting_requests` - Get pending meeting invitations that need a response with filtering by date range
+  - `respond_to_meeting` - Accept, decline, or tentatively respond to meeting invitations with optional comments
+  - Support for silent responses (update calendar without notifying organizer)
+  
+- **Out-of-Office Settings** (3 new tools)
+  - `get_out_of_office_settings` - Get current automatic reply configuration
+  - `set_out_of_office` - Configure automatic replies (immediate or scheduled) with separate messages for internal/external
+  - `disable_out_of_office` - Disable automatic replies while preserving messages
+  - Support for scheduling OOO with start/end times
+  - Configurable external audience (None/Known/All)
+
+### Changed
+- Enhanced email metadata to include `entry_id` field for easier attachment and meeting operations
+- Updated attachment list in email metadata to include filename, size, and type details
+- **Complete Documentation Overhaul**
+  - Created comprehensive technical documentation (DOCUMENTATION.md - 1500+ lines)
+  - Created detailed contribution guide (CONTRIBUTING.md - 400+ lines)
+  - Updated README.md with clear navigation and links to all documentation
+  - Removed redundant documentation files (NEW_FEATURES.md, OPTIMIZATIONS.md, PUBLISHING_GUIDE.md)
+  - Added cross-references between all documentation files
+  - Enhanced QUICK_START.md and EXAMPLES.md integration
+
+### Improved
+- **Code Quality**
+  - Removed unused helper functions (`get_outlook_signature`, `get_outlook_signature_via_display`)
+  - Factored out duplicate code into `_set_email_body()` helper function
+  - Optimized imports (removed unused `List` type)
+  - Cleaned up misleading comments about Outlook format inheritance
+  - Reduced codebase from 1981 to ~1840 lines (~140 lines saved)
+
+### Notes
+- Out-of-Office features require Outlook 2010+ with Exchange Server
+- OOO settings may not be accessible via COM automation on all Outlook configurations
+- All new features follow existing error handling patterns
+
 ## [1.1.0] - 2025-12-17
 
 ### Added
@@ -84,15 +129,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Future Roadmap
 
+### Completed Features
+- [x] Attachment download/upload support (v1.2.0)
+- [x] Meeting response handling (accept/decline) (v1.2.0)
+- [x] Out-of-office settings (v1.2.0)
+
 ### Planned Features
-- [ ] Attachment download/upload support
 - [ ] Task management integration
 - [ ] Folder management (create, move, delete)
 - [ ] Advanced filtering (flags, categories, custom properties)
-- [ ] Meeting response handling (accept/decline)
 - [ ] Email rules management (create, modify, delete)
-- [ ] Out-of-office settings
 - [ ] Cross-platform support exploration
+- [ ] Attachment content preview/thumbnails
+- [ ] Bulk attachment operations
 
 ### Performance Improvements
 - [ ] Async operations for better responsiveness

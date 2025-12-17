@@ -9,40 +9,56 @@
 
 A Model Context Protocol (MCP) server for Microsoft Outlook integration.
 
+**Version**: 1.2.0 | **Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) | **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) | **Examples**: [EXAMPLES.md](EXAMPLES.md)
+
 ## Overview
 
 This MCP server provides AI assistants with the ability to interact with Microsoft Outlook, including:
 
-- **Email Management**: Read, search, send, and draft emails with HTML support and Outlook signatures
-- **Calendar Management**: View, create, and search calendar events
+- **Email Management**: Read, search, send, and draft emails with HTML support, Outlook signatures, and attachments
+- **Calendar Management**: View, create, search calendar events, and respond to meeting invitations
 - **Contact Management**: View, create, and search contacts
+- **Out-of-Office Management**: Configure automatic reply settings
 
 ## Features
 
-### Email Tools
+> **Detailed documentation for each feature**: [DOCUMENTATION.md](DOCUMENTATION.md)
+
+### Email Tools ([Documentation](DOCUMENTATION.md#outils-email))
 
 - `get_inbox_emails` - Retrieve emails from inbox with filtering options
 - `get_sent_emails` - Retrieve sent emails
 - `search_emails` - Search emails across folders by subject, body, or sender
 - `send_email` - Send emails with CC/BCC support, HTML content, and Outlook signature integration
 - `create_draft_email` - Create draft emails without sending, with HTML and signature support
+- `get_email_attachments` - Get list of attachments from a specific email
+- `download_email_attachment` - Download attachment from an email to disk
+- `send_email_with_attachments` - Send emails with file attachments
 
-### Calendar Tools
+### Calendar Tools ([Documentation](DOCUMENTATION.md#outils-calendrier))
 
 - `get_calendar_events` - Get upcoming calendar events
 - `create_calendar_event` - Create new calendar events with attendees
 - `search_calendar_events` - Search events by subject or location
+- `get_meeting_requests` - Get pending meeting invitations that need a response
+- `respond_to_meeting` - Accept, decline, or tentatively respond to meeting invitations
 
-### Contact Tools
+### Contact Tools ([Documentation](DOCUMENTATION.md#outils-contacts))
 
 - `get_contacts` - Retrieve contacts with optional name filtering
 - `create_contact` - Create new contacts
 - `search_contacts` - Search contacts by name, email, or company
 
-### Folder Tools
+### Folder Tools ([Documentation](DOCUMENTATION.md#outils-dossiers))
 
 - `list_outlook_folders` - List all Outlook folders (ultra-fast, no item counts)
 - `search_emails_in_custom_folder` - Search in specific custom folders with date filtering
+
+### Out-of-Office Tools ([Documentation](DOCUMENTATION.md#outils-out-of-office))
+
+- `get_out_of_office_settings` - Get current automatic reply settings
+- `set_out_of_office` - Configure automatic replies (immediate or scheduled)
+- `disable_out_of_office` - Disable automatic replies
 
 ## Performance Optimizations
 
@@ -55,9 +71,11 @@ This MCP has been heavily optimized for **large mailboxes** and to **minimize Ou
 - **Smart defaults** - Optimized for daily usage
 - **Silent logging** - Minimal log output for cleaner integration
 
-**See [OPTIMIZATIONS.md](OPTIMIZATIONS.md) for detailed performance information.**
+**See [DOCUMENTATION.md - Performances](DOCUMENTATION.md#performances) for detailed performance information.**
 
 ## Installation
+
+> **Quick Start Guide**: [QUICK_START.md](QUICK_START.md) | **Full Installation Guide**: [DOCUMENTATION.md - Installation](DOCUMENTATION.md#installation)
 
 ### Prerequisites
 
@@ -82,6 +100,12 @@ pip install -e .
 ```
 
 3. Verify Outlook is running and configured with an account
+
+4. Test the installation:
+
+```bash
+python tests/test_connection.py
+```
 
 ## Usage
 
@@ -147,6 +171,8 @@ fastmcp dev src/outlook_mcp.py
 This will open an interactive prompt where you can test the tools.
 
 ## Tool Examples
+
+> **More Examples**: [EXAMPLES.md](EXAMPLES.md) - Real-world use cases and workflows
 
 ### Reading Emails
 
@@ -224,6 +250,87 @@ create_contact(
     job_title="Product Manager",
     mobile_phone="+1-555-1234"
 )
+```
+
+### Attachment Management
+
+```python
+# Get attachments from an email (use entry_id from get_inbox_emails)
+get_email_attachments(entry_id="00000000...")
+
+# Download a specific attachment
+download_email_attachment(
+    entry_id="00000000...",
+    attachment_index=1,
+    save_path="C:/Users/user/Downloads/report.pdf"
+)
+
+# Send email with attachments
+send_email_with_attachments(
+    to="colleague@company.com",
+    subject="Monthly Report",
+    body="Please find attached the report.",
+    attachments="C:/Users/user/Documents/report.pdf; C:/Users/user/Documents/summary.xlsx",
+    signature_name="My Signature"
+)
+```
+
+### Meeting Response Management
+
+```python
+# Get pending meeting requests
+get_meeting_requests(days_range=30)
+
+# Accept a meeting invitation
+respond_to_meeting(
+    entry_id="00000000...",
+    response="accept",
+    send_response=True
+)
+
+# Decline with a comment
+respond_to_meeting(
+    entry_id="00000000...",
+    response="decline",
+    send_response=True,
+    comment="Sorry, I have a conflict with another meeting."
+)
+
+# Tentatively accept
+respond_to_meeting(
+    entry_id="00000000...",
+    response="tentative",
+    send_response=True
+)
+```
+
+### Out-of-Office Management
+
+```python
+# Get current out-of-office settings
+get_out_of_office_settings()
+
+# Enable out-of-office immediately
+set_out_of_office(
+    enabled=True,
+    internal_reply="I'm out of office until next week. For urgent matters, contact my colleague.",
+    external_reply="I'm currently unavailable. I'll respond when I return.",
+    external_audience="Known"
+)
+
+# Schedule out-of-office for specific dates
+set_out_of_office(
+    enabled=True,
+    internal_reply="On vacation",
+    external_reply="I'm on vacation and will return on Dec 27th.",
+    scheduled=True,
+    start_time="2025-12-20 00:00",
+    end_time="2025-12-27 00:00",
+    external_audience="All"
+)
+
+# Disable out-of-office
+disable_out_of_office()
 ```
 
 ## Security & Permissions
@@ -311,7 +418,7 @@ ruff check src/
 - **Outlook Required**: Microsoft Outlook must be installed and running
 - **Single Account**: Works with the default Outlook profile only
 - **Performance**: Large mailboxes may have slower search performance
-- **Attachments**: Current version doesn't support attachment handling (planned)
+- **Out-of-Office API**: May not work on all Outlook versions (requires Outlook 2010+ with Exchange)
 
 ## Roadmap
 
@@ -320,15 +427,15 @@ ruff check src/
 - [x] Outlook signature integration
 - [x] Silent logging for cleaner integration
 - [x] Outlook rules listing
+- [x] Attachment download/upload support
+- [x] Meeting response handling (accept/decline/tentative)
+- [x] Out-of-office settings (get/set/disable)
 
 ### Planned Features
-- [ ] Attachment download/upload support
 - [ ] Task management integration
 - [ ] Folder management (create, move, delete)
 - [ ] Advanced filtering (flags, categories, custom properties)
-- [ ] Meeting response handling (accept/decline)
 - [ ] Email rules creation and modification
-- [ ] Out-of-office settings
 - [ ] Cross-platform support (investigate MAPI alternatives)
 
 ## License
@@ -337,20 +444,43 @@ MIT License - See LICENSE file for details.
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
-1. Test your changes with a real Outlook installation
-2. Follow the existing code style (Black + Ruff)
-3. Add docstrings to all public functions
-4. Update the README if adding new features
-5. Submit a pull request with a clear description of changes
+- How to set up your development environment
+- Code style guidelines (Black + Ruff)
+- How to submit pull requests
+- Roadmap and planned features
+
+Quick Start for Contributors:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes and test thoroughly
+4. Commit with conventional commits (`feat:`, `fix:`, `docs:`, etc.)
+5. Push and create a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
+
+## Documentation
+
+- **[README.md](README.md)** (this file) - Overview and quick start
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Complete technical documentation
+- **[EXAMPLES.md](EXAMPLES.md)** - Real-world examples and use cases
+- **[QUICK_START.md](QUICK_START.md)** - 5-minute setup guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ## Support
 
 For issues or questions:
-- Create an issue in the GitHub repository
-- Check existing issues for similar problems
-- Provide detailed information about your setup (Windows version, Outlook version, Python version)
+- **Create an issue**: [GitHub Issues](https://github.com/YOUR_USERNAME/mcp-outlook/issues)
+- **Check existing issues** for similar problems
+- **Provide details**: Windows version, Outlook version, Python version, error logs
+
+Before creating an issue:
+1. Run `python tests/test_connection.py` and include the output
+2. Check the [Troubleshooting](DOCUMENTATION.md#gestion-des-erreurs) section
+3. Review [existing issues](https://github.com/YOUR_USERNAME/mcp-outlook/issues)
 
 ## Acknowledgments
 
