@@ -4,15 +4,15 @@ Ce guide vous explique comment publier **MCP-OUTLOOK** sur GitHub pour le partag
 
 ---
 
-## ✅ Préparation Complétée
+## Préparation Complétée
 
 Le code a été nettoyé de toutes les références spécifiques :
-- ✅ Références "Disney" supprimées
-- ✅ Références "Vincent PAPUCHON" supprimées  
-- ✅ Exemples génériques (company.com, Acme Corp)
-- ✅ DISNEY_COMPLIANCE.md supprimé
-- ✅ pyproject.toml avec auteur générique
-- ✅ README.md nettoyé
+- Références "Disney" supprimées
+- Références "Vincent PAPUCHON" supprimées  
+- Exemples génériques (company.com, Acme Corp)
+- DISNEY_COMPLIANCE.md supprimé
+- pyproject.toml avec auteur générique
+- README.md nettoyé
 
 ---
 
@@ -33,8 +33,7 @@ Si vous n'avez pas encore de compte GitHub :
 4. Configurez le repository :
    - **Repository name** : `mcp-outlook`
    - **Description** : `Model Context Protocol server for Microsoft Outlook - Email, Calendar & Contacts integration`
-   - **Visibility** : Public ✅
-   - **Initialize** : Ne cochez RIEN (pas de README, pas de .gitignore, pas de licence)
+   - **Visibility** : Public - **Initialize** : Ne cochez RIEN (pas de README, pas de .gitignore, pas de licence)
 5. Cliquez sur "Create repository"
 
 ### 3. Initialiser Git Localement
@@ -96,14 +95,14 @@ git push -u origin main
    - **Release title** : `MCP-OUTLOOK v1.0.0 - Initial Release`
    - **Description** :
      ```markdown
-     # 🎉 First Public Release
+     # First Public Release
      
      ## Features
-     - 📧 Email management (read, send, search, draft)
+     - Email management (read, send, search, draft)
      - 📅 Calendar management (events, meetings)
      - 👥 Contact management
      - 📁 Custom folder support
-     - ⚡ Performance optimizations for large mailboxes
+     - Performance optimizations for large mailboxes
      
      ## Requirements
      - Windows OS
@@ -116,7 +115,7 @@ git push -u origin main
 
 ---
 
-## 🎯 Après la Publication
+## Après la Publication
 
 ### Ajouter des Topics
 
@@ -173,7 +172,7 @@ git push
 
 ---
 
-## 📝 Configuration Utilisateur Personnelle
+## Configuration Utilisateur Personnelle
 
 Pour vos besoins personnels (dossier "Vincent PAPUCHON (PERSO)"), ajoutez dans vos **User Rules** de Cursor :
 
@@ -184,17 +183,15 @@ Mes nouveaux emails arrivent dans le dossier "Vincent PAPUCHON (PERSO)/My Mails"
 
 ---
 
-## 🎉 Félicitations !
+## Félicitations !
 
-Votre projet MCP-OUTLOOK est maintenant public et disponible pour la communauté ! 🚀
-
-**URL du projet** : `https://github.com/YOUR_USERNAME/mcp-outlook`
+Votre projet MCP-OUTLOOK est maintenant public et disponible pour la communauté ! **URL du projet** : `https://github.com/YOUR_USERNAME/mcp-outlook`
 
 N'oubliez pas de :
 - ⭐ Mettre une étoile sur votre propre projet
 - 📢 Partager le lien
-- 🐛 Répondre aux issues
-- 🤝 Accepter les pull requests
+- Répondre aux issues
+- Accepter les pull requests
 
 ---
 

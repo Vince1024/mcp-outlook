@@ -1,11 +1,9 @@
-MCP Outlook
+# MCP Outlook
 
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
-
-<img src="https://api.iconify.design/material-symbols/mail-outline.svg?color=%23004080" width="64" height="64" alt="mail icon"> 
+[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io) 
 
 A Model Context Protocol (MCP) server for Microsoft Outlook integration.
 

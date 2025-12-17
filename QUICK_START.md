@@ -2,7 +2,7 @@
 
 Get up and running with MCP Outlook in 5 minutes!
 
-## ⚡ Prerequisites Check
+## Prerequisites Check
 
 - [ ] Windows OS
 - [ ] Microsoft Outlook installed and configured with at least one email account
@@ -40,7 +40,7 @@ Expected output:
 ✓ PASS: Server File
 ```
 
-## 🚀 Running the Server
+## Running the Server
 
 ### Quick Run
 
@@ -96,7 +96,7 @@ python src/outlook_mcp.py
 
 3. Restart Claude Desktop
 
-## 🎯 Try These Commands
+## Try These Commands
 
 Once configured, try asking your AI assistant:
 
@@ -124,7 +124,7 @@ Once configured, try asking your AI assistant:
 "Create a new contact for John Doe"
 ```
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Unable to connect to Outlook"
 
@@ -157,7 +157,7 @@ python Scripts/pywin32_postinstall.py -install
 3. Check the terminal for error messages
 4. Run `python test_connection.py` to diagnose
 
-## 📚 Next Steps
+## Next Steps
 
 - Read the full [README.md](README.md) for detailed documentation
 - Check [CONTRIBUTING.md](CONTRIBUTING.md) if you want to add features
@@ -171,7 +171,7 @@ python Scripts/pywin32_postinstall.py -install
 4. Check if Outlook is working normally outside the MCP
 5. Create an issue with your error details
 
-## ✅ Verification Checklist
+## Verification Checklist
 
 Before asking for help, verify:
 
@@ -185,7 +185,4 @@ Before asking for help, verify:
 
 ---
 
-**Time to first tool call**: ~5 minutes ⚡
-
-**Enjoy your AI-powered Outlook assistant!** 🎉
-
+**Time to first tool call**: ~5 minutes **Enjoy your AI-powered Outlook assistant!** 

@@ -1,4 +1,4 @@
-# 🚀 Optimisations Outlook MCP
+# Optimisations Outlook MCP
 
 ## Vue d'ensemble
 
@@ -6,7 +6,7 @@ Ce MCP Outlook a été optimisé pour **minimiser le gel d'Outlook** pendant les
 
 ---
 
-## ✅ Optimisations Implémentées
+## Optimisations Implémentées
 
 ### 1. **Système de Cache pour les Dossiers**
 - Cache global `_FOLDER_CACHE` qui mémorise les chemins de dossiers résolus
@@ -88,7 +88,7 @@ _*Note : Sur des dossiers avec énormément d'emails même récents, le gel peut
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
 ### Variables de Configuration (src/outlook_mcp.py)
 
@@ -126,14 +126,14 @@ Malgré toutes les optimisations, **Outlook COM est single-threaded** :
 - Le gel est **réduit** mais **pas éliminé complètement**
 
 ### Solutions :
-1. ✅ Fermer Outlook pendant l'utilisation du MCP
-2. ✅ Utiliser des dossiers plus spécifiques (moins d'emails)
-3. ✅ Réduire `days_back` au minimum nécessaire
-4. ✅ Réduire les `limit` de résultats
+1. Fermer Outlook pendant l'utilisation du MCP
+2. Utiliser des dossiers plus spécifiques (moins d'emails)
+3. Réduire `days_back` au minimum nécessaire
+4. Réduire les `limit` de résultats
 
 ---
 
-## 📝 UserRule Recommandée (Cursor)
+## UserRule Recommandée (Cursor)
 
 Pour une utilisation optimale avec Cursor, ajoutez cette UserRule :
 
@@ -143,7 +143,7 @@ For my Outlook emails: my new emails arrive in "Personal/My Mails" via an automa
 
 ---
 
-## 🎯 Recommandations
+## Recommandations
 
 ### Pour un Usage Optimal
 
@@ -177,7 +177,7 @@ Des tests sont disponibles dans le dossier `tests/` :
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - `README.md` : Documentation principale
 - `QUICK_START.md` : Guide de démarrage rapide

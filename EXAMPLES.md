@@ -2,7 +2,7 @@
 
 Real-world examples of using MCP Outlook with AI assistants.
 
-## 📧 Email Examples
+## Email Examples
 
 ### Example 1: Check Unread Emails
 
@@ -373,7 +373,7 @@ Found 3 contacts from Acme Corp:
 
 **AI Response**:
 ```
-📧 EMAILS (3 unread):
+EMAILS (3 unread):
 - Jane Smith: "Q1 Budget Review"
 - Team: "Sprint Planning Notes"
 - HR: "Benefits Update"
@@ -406,7 +406,7 @@ You have a fairly busy day ahead!
 
 **AI Response**:
 ```
-📧 RECENT EMAILS WITH JOHN:
+RECENT EMAILS WITH JOHN:
 1. "Project Update" (Jan 15, 9:00 AM)
 2. "Meeting Agenda" (Jan 14, 3:00 PM)
 3. "Budget Questions" (Jan 12, 10:00 AM)
@@ -443,7 +443,7 @@ Ready for your meeting!
 ```
 📊 YOUR DAY SUMMARY:
 
-📧 EMAILS SENT: 7
+EMAILS SENT: 7
 - Follow-up to Jane about budget
 - Team update on sprint progress
 - Response to HR about benefits
@@ -454,8 +454,7 @@ Ready for your meeting!
 - Project Review (2:00 PM)
 - 1-on-1 with Manager (4:00 PM)
 
-Great work today! 🎉
-```
+Great work today! ```
 
 ---
 
@@ -504,7 +503,7 @@ Say: "Find emails about project alpha from last month"
 
 ---
 
-## 🎯 Use Cases
+## Use Cases
 
 ### Personal Productivity
 - Morning briefings
@@ -532,7 +531,7 @@ Say: "Find emails about project alpha from last month"
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 Try these commands to get familiar:
 
@@ -544,7 +543,7 @@ Try these commands to get familiar:
 
 ---
 
-**Happy Automating! 🎉**
+**Happy Automating! **
 
 For more information, see:
 - [README.md](README.md) - Full documentation
