@@ -51,7 +51,7 @@ DEFAULT_DAYS_BACK = 2          # Seulement 2 derniers jours par défaut
 
 ### 7. **Exclusion des Boîtes d'Équipe et Partagées**
 - Liste `EXCLUDED_STORES` pour exclure les boîtes mail d'équipe/partagées
-- Par défaut : `"DLP IS SPID"` (boîte d'équipe Disney)
+- Par défaut : None (search all stores)
 - **Gain** : Évite de scanner des milliers d'emails d'équipe inutilement
 - **Résultat** : Recherches plus rapides et résultats plus pertinents
 - **Configuration** : Ajoutez simplement le nom du store dans la liste
@@ -102,7 +102,7 @@ DEFAULT_DAYS_BACK = 2              # Jours en arrière pour la recherche
 
 **Recherche standard (2 derniers jours) :**
 ```python
-search_emails_in_custom_folder("Vincent PAPUCHON (PERSO)/My Mails")
+search_emails_in_custom_folder("Personal/My Mails")
 ```
 
 **Recherche étendue (30 derniers jours) :**
@@ -138,7 +138,7 @@ Malgré toutes les optimisations, **Outlook COM est single-threaded** :
 Pour une utilisation optimale avec Cursor, ajoutez cette UserRule :
 
 ```
-Pour mes emails Outlook : mes nouveaux emails arrivent dans "Vincent PAPUCHON (PERSO)/My Mails" via une règle automatique. L'Inbox est toujours vide. Quand je demande "mes emails", "emails reçus", "nouveaux emails" ou "emails non lus", utilise TOUJOURS search_emails_in_custom_folder() avec folder_path="Vincent PAPUCHON (PERSO)/My Mails" au lieu de get_inbox_emails(). Par défaut, cherche sur les 2 derniers jours (days_back=2).
+For my Outlook emails: my new emails arrive in "Personal/My Mails" via an automatic rule. The Inbox is always empty. When I ask for "my emails", "received emails", "new emails" or "unread emails", ALWAYS use search_emails_in_custom_folder() with folder_path="Personal/My Mails" instead of get_inbox_emails(). By default, search the last 2 days (days_back=2).
 ```
 
 ---
@@ -149,8 +149,8 @@ Pour mes emails Outlook : mes nouveaux emails arrivent dans "Vincent PAPUCHON (P
 
 1. **Spécifiez toujours un sous-dossier spécifique** si possible :
    ```python
-   "Vincent PAPUCHON (PERSO)/My Mails/Incidents"
-   "Vincent PAPUCHON (PERSO)/My Mails/Jira"
+   "Personal/My Mails/Incidents"
+   "Personal/My Mails/Projects"
    ```
 
 2. **Utilisez des plages de dates courtes** :
@@ -188,5 +188,5 @@ Des tests sont disponibles dans le dossier `tests/` :
 
 **Date** : 16 décembre 2025  
 **Version** : 1.1.0 (optimisée)  
-**Auteur** : Disney DLP-SPID Team
+**Author** : MCP Outlook Contributors
 

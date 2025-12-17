@@ -1,29 +1,31 @@
-# MCP Outlook
+MCP Outlook
 
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 
+<img src="https://api.iconify.design/material-symbols/mail-outline.svg?color=%23004080" width="64" height="64" alt="mail icon"> 
+
 A Model Context Protocol (MCP) server for Microsoft Outlook integration.
 
-## 🎯 Overview
+## Overview
 
 This MCP server provides AI assistants with the ability to interact with Microsoft Outlook, including:
 
-- **📧 Email Management**: Read, search, send, and draft emails
-- **📅 Calendar Management**: View, create, and search calendar events
-- **👥 Contact Management**: View, create, and search contacts
+- **Email Management**: Read, search, send, and draft emails with HTML support and Outlook signatures
+- **Calendar Management**: View, create, and search calendar events
+- **Contact Management**: View, create, and search contacts
 
-## ✨ Features
+## Features
 
 ### Email Tools
 
 - `get_inbox_emails` - Retrieve emails from inbox with filtering options
 - `get_sent_emails` - Retrieve sent emails
 - `search_emails` - Search emails across folders by subject, body, or sender
-- `send_email` - Send emails with CC/BCC support
-- `create_draft_email` - Create draft emails without sending
+- `send_email` - Send emails with CC/BCC support, HTML content, and Outlook signature integration
+- `create_draft_email` - Create draft emails without sending, with HTML and signature support
 
 ### Calendar Tools
 
@@ -42,19 +44,20 @@ This MCP server provides AI assistants with the ability to interact with Microso
 - `list_outlook_folders` - List all Outlook folders (ultra-fast, no item counts)
 - `search_emails_in_custom_folder` - Search in specific custom folders with date filtering
 
-## ⚡ Performance Optimizations
+## Performance Optimizations
 
 This MCP has been heavily optimized for **large mailboxes** and to **minimize Outlook freezing**:
 
-- 🚀 **Folder caching** - 45x faster on repeated searches
-- 🚀 **Date filtering** - Search only recent emails (default: 2 days)
-- 🚀 **Direct indexing** - Faster iteration without `items.Count`
-- 🚀 **Reduced limits** - Prevents long freezes (max 50 emails)
-- 🚀 **Smart defaults** - Optimized for daily usage
+- **Folder caching** - 45x faster on repeated searches
+- **Date filtering** - Search only recent emails (default: 2 days)
+- **Direct indexing** - Faster iteration without `items.Count`
+- **Reduced limits** - Prevents long freezes (max 50 emails)
+- **Smart defaults** - Optimized for daily usage
+- **Silent logging** - Minimal log output for cleaner integration
 
 **See [OPTIMIZATIONS.md](OPTIMIZATIONS.md) for detailed performance information.**
 
-## 🔧 Installation
+## Installation
 
 ### Prerequisites
 
@@ -80,7 +83,7 @@ pip install -e .
 
 3. Verify Outlook is running and configured with an account
 
-## 🚀 Usage
+## Usage
 
 ### Running the Server
 
@@ -143,7 +146,7 @@ fastmcp dev src/outlook_mcp.py
 
 This will open an interactive prompt where you can test the tools.
 
-## 📚 Tool Examples
+## Tool Examples
 
 ### Reading Emails
 
@@ -166,12 +169,21 @@ send_email(
     importance="high"
 )
 
-# Create a draft with multiple recipients
+# Send email with HTML content and Outlook signature
+send_email(
+    to="colleague@company.com",
+    subject="Project Update",
+    html_body="<h1>Update</h1><p>Here are the details...</p>",
+    signature_name="My Signature"
+)
+
+# Create a draft with multiple recipients and signature
 create_draft_email(
     to="team@company.com",
     subject="Project Update",
     body="Here's the latest update...",
-    cc="manager@company.com"
+    cc="manager@company.com",
+    signature_name="My Signature"
 )
 ```
 
@@ -214,14 +226,14 @@ create_contact(
 )
 ```
 
-## 🔒 Security & Permissions
+## Security & Permissions
 
 - This server requires access to your Outlook data
 - It uses Windows COM automation (no credentials stored)
 - All operations are performed with your current Outlook profile's permissions
 - Make sure Outlook is running and configured before starting the server
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "Unable to connect to Outlook"
 
@@ -244,7 +256,7 @@ create_contact(
 - Use ISO format for dates: `2025-01-15 14:00`
 - Supported formats: "YYYY-MM-DD HH:MM", "tomorrow 2pm", "next Monday 10am"
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 
@@ -293,7 +305,7 @@ black src/
 ruff check src/
 ```
 
-## 📝 Limitations
+## Limitations
 
 - **Windows Only**: Uses COM automation which is Windows-specific
 - **Outlook Required**: Microsoft Outlook must be installed and running
@@ -301,22 +313,29 @@ ruff check src/
 - **Performance**: Large mailboxes may have slower search performance
 - **Attachments**: Current version doesn't support attachment handling (planned)
 
-## 🗺️ Roadmap
+## Roadmap
 
+### Recently Added
+- [x] HTML email support
+- [x] Outlook signature integration
+- [x] Silent logging for cleaner integration
+- [x] Outlook rules listing
+
+### Planned Features
 - [ ] Attachment download/upload support
 - [ ] Task management integration
 - [ ] Folder management (create, move, delete)
 - [ ] Advanced filtering (flags, categories, custom properties)
 - [ ] Meeting response handling (accept/decline)
-- [ ] Email rules management
+- [ ] Email rules creation and modification
 - [ ] Out-of-office settings
 - [ ] Cross-platform support (investigate MAPI alternatives)
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file for details.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please follow these guidelines:
 
@@ -326,14 +345,14 @@ Contributions are welcome! Please follow these guidelines:
 4. Update the README if adding new features
 5. Submit a pull request with a clear description of changes
 
-## 📞 Support
+## Support
 
 For issues or questions:
 - Create an issue in the GitHub repository
 - Check existing issues for similar problems
 - Provide detailed information about your setup (Windows version, Outlook version, Python version)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [FastMCP](https://github.com/jlowin/fastmcp)
 - Uses [pywin32](https://github.com/mhammond/pywin32) for COM automation

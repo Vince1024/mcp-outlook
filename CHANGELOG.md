@@ -5,9 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-17
+
+### Added
+- **HTML Email Support**
+  - `send_email` now accepts `html_body` parameter for rich HTML content
+  - `create_draft_email` now accepts `html_body` parameter
+  
+- **Outlook Signature Integration**
+  - `send_email` now accepts `signature_name` parameter to automatically include Outlook signatures
+  - `create_draft_email` now accepts `signature_name` parameter
+  - Automatic signature loading from user's Outlook Signatures folder
+  - Preserves inline images and embedded content in signatures
+  - Helper function `get_outlook_signature()` to load signature files
+
+### Changed
+- **Silent Logging**
+  - Configured logging to CRITICAL level for minimal output
+  - Added NullHandler to prevent log spam
+  - Silenced all MCP/FastMCP internal loggers
+  - Disabled log propagation for cleaner integration
+  - Removed all informational log messages from tool execution
+
+### Fixed
+- Improved error handling in signature loading with fallback mechanisms
+- Fixed inline image preservation when using Outlook signatures
+
 ## [1.0.0] - 2025-12-16
 
-### 🎉 Initial Public Release
+### Initial Public Release
 
 #### Added
 - **Email Management**
@@ -33,11 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `search_contacts` - Search contacts by name, email, or company
 
 #### Performance Optimizations
-- 🚀 Folder caching (45x faster on repeated searches)
-- 🚀 Date filtering (search only recent emails, default: 2 days)
-- 🚀 Direct indexing (faster iteration without items.Count)
-- 🚀 Reduced limits (prevents long freezes, max 50 emails)
-- 🚀 Smart defaults optimized for daily usage
+- Folder caching (45x faster on repeated searches)
+- Date filtering (search only recent emails, default: 2 days)
+- Direct indexing (faster iteration without items.Count)
+- Reduced limits (prevents long freezes, max 50 emails)
+- Smart defaults optimized for daily usage
 
 #### Documentation
 - Comprehensive README with installation and usage

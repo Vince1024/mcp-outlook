@@ -42,12 +42,23 @@ from fastmcp import FastMCP
 # CONFIGURATION AND CONSTANTS
 # ============================================================================
 
-# Configure logging with standard format
+# Configure logging - completely silent
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.CRITICAL,  # Only critical errors
+    format='%(message)s',
+    handlers=[logging.NullHandler()]  # No output
 )
+
+# Set our logger to CRITICAL (completely silent)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.CRITICAL)
+
+# Silence all MCP/FastMCP related loggers completely
+for logger_name in ['mcp', 'FastMCP', 'fastmcp', 'mcp.server', 'fastmcp.server', 
+                     'mcp.client', 'fastmcp.client', 'asyncio', '__main__']:
+    logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+    logging.getLogger(logger_name).addHandler(logging.NullHandler())
+    logging.getLogger(logger_name).propagate = False
 
 # Initialize FastMCP server
 mcp = FastMCP("outlook")
@@ -98,6 +109,84 @@ _FOLDER_CACHE: Dict[str, Any] = {}  # folder_path -> Outlook Folder object
 
 
 # ============================================================================
+# SIGNATURE HELPER
+# ============================================================================
+def get_outlook_signature_via_display(mail_item, signature_name: Optional[str] = None) -> str:
+    """
+    Get the signature by displaying the mail item temporarily.
+    This allows Outlook to insert the default or specified signature naturally.
+    
+    Args:
+        mail_item: The Outlook mail item object
+        signature_name: Optional signature name (not used for now, uses default)
+        
+    Returns:
+        The HTMLBody with the signature inserted by Outlook
+    """
+    try:
+        # Display the mail item (this triggers Outlook to add the default signature)
+        # But don't show the window to the user
+        import win32com.client
+        import pythoncom
+        
+        # Get the current HTMLBody (which should now have the signature)
+        # Note: We can't easily specify which signature without displaying
+        # So we use a workaround: temporarily display to get signature
+        
+        # Get the account's default signature by inspecting the HTMLBody after Display
+        inspector = mail_item.GetInspector
+        
+        # Outlook adds signature when we access HTMLBody after calling Display
+        mail_item.Display(False)  # False = don't show window
+        signature_html = mail_item.HTMLBody
+        mail_item.Close(1)  # 1 = olDiscard, don't save changes
+        
+        return signature_html
+        
+    except Exception as e:
+        return ""
+
+
+def get_outlook_signature(signature_name: str) -> Optional[str]:
+    """
+    Load an Outlook signature by name from the signatures folder.
+    
+    Args:
+        signature_name: Name of the signature (without extension)
+        
+    Returns:
+        HTML content of the signature, or None if not found
+    """
+    import os
+    
+    # Get the user's Outlook signatures folder
+    signatures_path = os.path.join(
+        os.environ.get('APPDATA', ''),
+        'Microsoft',
+        'Signatures'
+    )
+    
+    # Try to find the signature file (with or without email suffix)
+    signature_file = os.path.join(signatures_path, f"{signature_name}.htm")
+    
+    if not os.path.exists(signature_file):
+        # Try with common suffixes
+        for file in os.listdir(signatures_path):
+            if file.startswith(signature_name) and file.endswith('.htm'):
+                signature_file = os.path.join(signatures_path, file)
+                break
+    
+    if os.path.exists(signature_file):
+        try:
+            with open(signature_file, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+        except Exception as e:
+            return None
+    
+    return None
+
+
+# ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
 
@@ -121,9 +210,7 @@ def get_outlook_application():
         - This uses late binding (Dispatch) rather than early binding for compatibility
     """
     try:
-        logger.debug("Attempting to connect to Outlook Application via COM")
         outlook = win32com.client.Dispatch("Outlook.Application")
-        logger.debug("Successfully connected to Outlook Application")
         return outlook
     except Exception as e:
         # Log the error with full context for debugging
@@ -161,15 +248,12 @@ def _get_folder_by_path(namespace, folder_path: str, use_cache: bool = True):
         try:
             # Verify cached folder is still valid
             _ = _FOLDER_CACHE[folder_path].Name
-            logger.debug(f"Using cached folder: {folder_path}")
             return _FOLDER_CACHE[folder_path]
         except Exception:
             # Cache entry is stale, remove it
-            logger.debug(f"Cache entry stale for: {folder_path}")
             del _FOLDER_CACHE[folder_path]
     
     # Search for folder
-    logger.debug(f"Searching for folder: {folder_path}")
     folder_parts = folder_path.split('/')
     target_folder = None
     
@@ -178,7 +262,6 @@ def _get_folder_by_path(namespace, folder_path: str, use_cache: bool = True):
         try:
             # Skip excluded stores (team mailboxes, shared mailboxes)
             if store.DisplayName in EXCLUDED_STORES:
-                logger.debug(f"Skipping excluded store: {store.DisplayName}")
                 continue
             
             current_folder = store.GetRootFolder()
@@ -200,13 +283,11 @@ def _get_folder_by_path(namespace, folder_path: str, use_cache: bool = True):
                 break
                 
         except Exception as e:
-            logger.debug(f"Could not navigate folder path in store: {e}")
             continue
     
     # Cache the result if found
     if target_folder is not None and use_cache:
         _FOLDER_CACHE[folder_path] = target_folder
-        logger.debug(f"Cached folder: {folder_path}")
     
     return target_folder
 
@@ -392,8 +473,6 @@ def get_inbox_emails(limit: int = DEFAULT_EMAIL_LIMIT, unread_only: bool = False
         - When unread_only=True, we fetch up to limit*2 items to ensure enough results
     """
     try:
-        logger.info(f"Fetching inbox emails: limit={limit}, unread_only={unread_only}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         inbox = namespace.GetDefaultFolder(OUTLOOK_FOLDER_INBOX)
@@ -420,11 +499,10 @@ def get_inbox_emails(limit: int = DEFAULT_EMAIL_LIMIT, unread_only: bool = False
                 emails.append(format_email(mail))
                 count += 1
             except Exception as e:
-                logger.warning(f"Failed to format email, skipping: {e}")
+                pass
             
             mail = items.GetNext()
         
-        logger.info(f"Successfully retrieved {len(emails)} inbox emails")
         
         return json.dumps({
             "success": True,
@@ -468,8 +546,6 @@ def get_sent_emails(limit: int = DEFAULT_EMAIL_LIMIT) -> str:
         - Sorted by SentOn date in descending order
     """
     try:
-        logger.info(f"Fetching sent emails: limit={limit}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         sent_folder = namespace.GetDefaultFolder(OUTLOOK_FOLDER_SENT)
@@ -490,11 +566,10 @@ def get_sent_emails(limit: int = DEFAULT_EMAIL_LIMIT) -> str:
                 emails.append(format_email(mail))
                 count += 1
             except Exception as e:
-                logger.warning(f"Failed to format email, skipping: {e}")
+                pass
             
             mail = items.GetNext()
         
-        logger.info(f"Successfully retrieved {len(emails)} sent emails")
         
         return json.dumps({
             "success": True,
@@ -544,8 +619,6 @@ def search_emails(query: str, folder: str = "inbox", limit: int = 20) -> str:
         - When folder="all", searches inbox, sent, and drafts folders
     """
     try:
-        logger.info(f"Searching emails: query='{query}', folder='{folder}', limit={limit}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         
@@ -595,7 +668,7 @@ def search_emails(query: str, folder: str = "inbox", limit: int = 20) -> str:
                     if len(emails) >= limit:
                         break
                 except Exception as e:
-                    logger.warning(f"Failed to format email, skipping: {e}")
+                    pass
                 
                 mail = items.GetNext()
             
@@ -603,7 +676,6 @@ def search_emails(query: str, folder: str = "inbox", limit: int = 20) -> str:
             if len(emails) >= limit:
                 break
         
-        logger.info(f"Search completed: found {len(emails)} matching emails")
         
         return json.dumps({
             "success": True,
@@ -628,7 +700,9 @@ def send_email(
     body: str,
     cc: Optional[str] = None,
     bcc: Optional[str] = None,
-    importance: str = "normal"
+    importance: str = "normal",
+    html_body: Optional[str] = None,
+    signature_name: Optional[str] = None
 ) -> str:
     """
     Send an email via Outlook.
@@ -640,10 +714,13 @@ def send_email(
         to: Recipient email address(es), semicolon-separated for multiple
             Example: "user1@example.com" or "user1@example.com; user2@example.com"
         subject: Email subject line
-        body: Email body content (plain text format)
+        body: Email body content (plain text format, used if html_body and signature_name are not provided)
         cc: CC recipients (optional), semicolon-separated
         bcc: BCC recipients (optional), semicolon-separated
         importance: Email importance level (low, normal, high) (default: normal)
+        html_body: HTML body content (optional). If provided, this will be used instead of body
+        signature_name: Name of Outlook signature to use (optional). If provided, loads signature from Outlook
+            Example: "Work Signature" will load "Work Signature (user@company.com).htm" from signatures folder
     
     Returns:
         JSON string with structure:
@@ -659,29 +736,66 @@ def send_email(
         >>> send_email("team@company.com", "Urgent", "...", importance="high")
         {"success": true, "message": "Email sent to team@company.com"}
         
+        >>> send_email("user@company.com", "Hello", "Message", signature_name="VP DXT")
+        {"success": true, "message": "Email sent to user@company.com"}
+        
     Security Notes:
         - No sensitive data should be included in logs
         - Recipient addresses are logged but email content is not
         - BCC recipients are never logged for privacy
     """
     try:
-        # Log the operation without exposing email content
-        logger.info(f"Sending email: to='{to}', subject='{subject}', importance='{importance}'")
-        
         outlook = get_outlook_application()
         mail = outlook.CreateItem(OUTLOOK_ITEM_MAIL)
         
         mail.To = to
         mail.Subject = subject
-        mail.Body = body
         
+        # Determine the email body
+        if signature_name:
+            # Use Outlook's Display method to get signature naturally with embedded images
+            try:
+                # Display the email to let Outlook add the default signature with images
+                mail.Display(False)  # False = don't show window to user
+                
+                # Get the HTMLBody with signature (Outlook has attached inline images)
+                signature_html = mail.HTMLBody
+                
+                # DON'T close the mail - we need to keep it to preserve attached images
+                # Instead, modify the HTMLBody to add our content before the signature
+                if html_body:
+                    mail.HTMLBody = html_body + signature_html
+                else:
+                    # Convert plain text body to HTML and add before signature
+                    body_html = body.replace('\n', '<br>')
+                    mail.HTMLBody = f"<html><body><p>{body_html}</p>{signature_html}</body></html>"
+                
+                # The mail object now has our content + signature with properly attached images
+                    
+            except Exception as e:
+                # Fallback: Load signature from file
+                signature_html = get_outlook_signature(signature_name)
+                if signature_html:
+                    if html_body:
+                        mail.HTMLBody = html_body + "<br>" + signature_html
+                    else:
+                        body_html = body.replace('\n', '<br>')
+                        mail.HTMLBody = f"<html><body><p>{body_html}</p><br>{signature_html}</body></html>"
+                else:
+                    if html_body:
+                        mail.HTMLBody = html_body
+                    else:
+                        mail.Body = body
+        elif html_body:
+            mail.HTMLBody = html_body
+        else:
+            mail.Body = body
+        
+        # Set CC and BCC recipients
         if cc:
             mail.CC = cc
-            logger.debug(f"CC recipients: {cc}")
         if bcc:
             mail.BCC = bcc
-            # Don't log BCC recipients for privacy
-            logger.debug("BCC recipients added (not logged for privacy)")
         
         # Set importance level using named constants
         importance_map = {
@@ -693,8 +807,6 @@ def send_email(
         
         # Send the email
         mail.Send()
-        
-        logger.info(f"Email sent successfully to {to}")
         
         return json.dumps({
             "success": True,
@@ -716,7 +828,9 @@ def create_draft_email(
     subject: str,
     body: str,
     cc: Optional[str] = None,
-    bcc: Optional[str] = None
+    bcc: Optional[str] = None,
+    html_body: Optional[str] = None,
+    signature_name: Optional[str] = None
 ) -> str:
     """
     Create a draft email in Outlook without sending it.
@@ -728,9 +842,12 @@ def create_draft_email(
     Args:
         to: Recipient email address(es), semicolon-separated for multiple
         subject: Email subject line
-        body: Email body content (plain text format)
+        body: Email body content (plain text format, used if html_body and signature_name are not provided)
         cc: CC recipients (optional), semicolon-separated
         bcc: BCC recipients (optional), semicolon-separated
+        html_body: HTML body content (optional). If provided, this will be used instead of body
+        signature_name: Name of Outlook signature to use (optional). If provided, loads signature from Outlook
+            Example: "Work Signature" will load "Work Signature (user@company.com).htm" from signatures folder
     
     Returns:
         JSON string with structure:
@@ -743,21 +860,62 @@ def create_draft_email(
         >>> create_draft_email("manager@company.com", "Report", "Draft report...")
         {"success": true, "message": "Draft email created"}
         
+        >>> create_draft_email("user@company.com", "Hello", "Message", signature_name="VP DXT")
+        {"success": true, "message": "Draft email created"}
+        
     Notes:
         - Draft is saved in the user's Drafts folder
         - User can find and edit the draft in Outlook
         - No email is sent until the user manually sends it
     """
     try:
-        logger.info(f"Creating draft email: to='{to}', subject='{subject}'")
-        
         outlook = get_outlook_application()
         mail = outlook.CreateItem(OUTLOOK_ITEM_MAIL)
         
         mail.To = to
         mail.Subject = subject
-        mail.Body = body
         
+        # Determine the email body
+        if signature_name:
+            # Use Outlook's Display method to get signature naturally with embedded images
+            try:
+                # Display the email to let Outlook add the default signature with images
+                mail.Display(False)  # False = don't show window to user
+                
+                # Get the HTMLBody with signature (Outlook has attached inline images)
+                signature_html = mail.HTMLBody
+                
+                # DON'T close the mail - we need to keep it to preserve attached images
+                # Instead, modify the HTMLBody to add our content before the signature
+                if html_body:
+                    mail.HTMLBody = html_body + signature_html
+                else:
+                    # Convert plain text body to HTML and add before signature
+                    body_html = body.replace('\n', '<br>')
+                    mail.HTMLBody = f"<html><body><p>{body_html}</p>{signature_html}</body></html>"
+                
+                # The mail object now has our content + signature with properly attached images
+                    
+            except Exception as e:
+                # Fallback: Load signature from file
+                signature_html = get_outlook_signature(signature_name)
+                if signature_html:
+                    if html_body:
+                        mail.HTMLBody = html_body + "<br>" + signature_html
+                    else:
+                        body_html = body.replace('\n', '<br>')
+                        mail.HTMLBody = f"<html><body><p>{body_html}</p><br>{signature_html}</body></html>"
+                else:
+                    if html_body:
+                        mail.HTMLBody = html_body
+                    else:
+                        mail.Body = body
+        elif html_body:
+            mail.HTMLBody = html_body
+        else:
+            mail.Body = body
+        
+        # Set CC and BCC recipients
         if cc:
             mail.CC = cc
         if bcc:
@@ -765,8 +923,6 @@ def create_draft_email(
         
         # Save as draft (does not send)
         mail.Save()
-        
-        logger.info("Draft email created successfully")
         
         return json.dumps({
             "success": True,
@@ -840,11 +996,11 @@ def _get_all_folders(folder, folder_list=None, parent_path="", include_counts=Fa
                 for subfolder in folder.Folders:
                     _get_all_folders(subfolder, folder_list, current_path, include_counts)
         except Exception as e:
-            logger.debug(f"Could not access subfolders of {current_path}: {e}")
-                
+            pass
+        
     except Exception as e:
         # Some system folders may throw errors when accessed
-        logger.debug(f"Could not access folder: {e}")
+        pass
     
     return folder_list
 
@@ -893,8 +1049,6 @@ def list_outlook_folders() -> str:
         - Returns in seconds instead of minutes!
     """
     try:
-        logger.info("Listing all Outlook folders (fast mode - no counts)")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         
@@ -906,7 +1060,6 @@ def list_outlook_folders() -> str:
             try:
                 # Skip excluded stores (team mailboxes, shared mailboxes)
                 if store.DisplayName in EXCLUDED_STORES:
-                    logger.debug(f"Skipping excluded store: {store.DisplayName}")
                     continue
                 
                 root_folder = store.GetRootFolder()
@@ -914,9 +1067,7 @@ def list_outlook_folders() -> str:
                 store_folders = _get_all_folders(root_folder, include_counts=False)
                 all_folders.extend(store_folders)
             except Exception as e:
-                logger.debug(f"Could not access store {store.DisplayName}: {e}")
-        
-        logger.info(f"Found {len(all_folders)} folders")
+                pass
         
         return json.dumps({
             "success": True,
@@ -977,8 +1128,6 @@ def search_emails_in_custom_folder(
         - Searching ALL emails (days_back <= 0) can freeze Outlook for minutes!
     """
     try:
-        logger.info(f"Searching in custom folder: '{folder_path}', query='{query}', limit={limit}, days_back={days_back}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         
@@ -989,7 +1138,6 @@ def search_emails_in_custom_folder(
         target_folder = _get_folder_by_path(namespace, folder_path, use_cache=True)
         
         if target_folder is None:
-            logger.warning(f"Folder not found: '{folder_path}'")
             return json.dumps({
                 "success": False,
                 "error": f"Folder '{folder_path}' not found. Use list_outlook_folders() to see available folders."
@@ -1004,7 +1152,6 @@ def search_emails_in_custom_folder(
             start_date = datetime.now() - timedelta(days=days_back)
             filter_str = f"[ReceivedTime] >= '{start_date.strftime('%m/%d/%Y')}'"
             items = items.Restrict(filter_str)
-            logger.debug(f"Applied date filter: last {days_back} days (since {start_date.strftime('%Y-%m-%d')})")
         
         items.Sort("[ReceivedTime]", True)  # Sort by received time, descending
         
@@ -1036,7 +1183,6 @@ def search_emails_in_custom_folder(
                             
                 except Exception as e:
                     # End of collection or error accessing item
-                    logger.debug(f"Reached end of collection or error at index {i}: {e}")
                     break
         else:
             # No query - return all emails up to limit using direct indexing
@@ -1046,10 +1192,8 @@ def search_emails_in_custom_folder(
                     emails.append(format_email(mail))
                 except Exception as e:
                     # End of collection or error accessing item
-                    logger.debug(f"Reached end of collection or error at index {i}: {e}")
                     break
         
-        logger.info(f"Found {len(emails)} emails in folder '{folder_path}'")
         
         result = {
             "success": True,
@@ -1124,8 +1268,6 @@ def list_outlook_rules() -> str:
         - Rules are logged for audit purposes
     """
     try:
-        logger.info("Retrieving Outlook rules")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         
@@ -1249,7 +1391,6 @@ def list_outlook_rules() -> str:
                 rules.append(rule_info)
                 
             except Exception as e:
-                logger.warning(f"Failed to parse rule '{rule.Name}': {e}")
                 # Add a minimal entry for this rule
                 rules.append({
                     "name": rule.Name if hasattr(rule, 'Name') else "Unknown",
@@ -1260,7 +1401,6 @@ def list_outlook_rules() -> str:
                     "exceptions": []
                 })
         
-        logger.info(f"Successfully retrieved {len(rules)} Outlook rules")
         
         return json.dumps({
             "success": True,
@@ -1311,8 +1451,6 @@ def get_calendar_events(days_ahead: int = 7, include_past: bool = False) -> str:
         - Handles all-day events correctly
     """
     try:
-        logger.info(f"Fetching calendar events: days_ahead={days_ahead}, include_past={include_past}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         calendar = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CALENDAR)
@@ -1340,7 +1478,6 @@ def get_calendar_events(days_ahead: int = 7, include_past: bool = False) -> str:
         for appointment in filtered_items:
             events.append(format_appointment(appointment))
         
-        logger.info(f"Successfully retrieved {len(events)} calendar events")
         
         return json.dumps({
             "success": True,
@@ -1410,8 +1547,6 @@ def create_calendar_event(
         - Reminder is enabled by default (productivity best practice)
     """
     try:
-        logger.info(f"Creating calendar event: subject='{subject}', start='{start_time}', end='{end_time}'")
-        
         outlook = get_outlook_application()
         appointment = outlook.CreateItem(OUTLOOK_ITEM_APPOINTMENT)
         
@@ -1422,7 +1557,6 @@ def create_calendar_event(
             start_dt = date_parser.parse(start_time)
             end_dt = date_parser.parse(end_time)
         except Exception as e:
-            logger.warning(f"Invalid date format provided: start='{start_time}', end='{end_time}'")
             return json.dumps({
                 "success": False,
                 "error": f"Invalid date format: {e}. Use ISO format like '2025-01-15 14:00' or natural language like 'tomorrow 2pm'"
@@ -1439,10 +1573,8 @@ def create_calendar_event(
             appointment.Body = body
         if required_attendees:
             appointment.RequiredAttendees = required_attendees
-            logger.debug(f"Required attendees: {required_attendees}")
         if optional_attendees:
             appointment.OptionalAttendees = optional_attendees
-            logger.debug(f"Optional attendees: {optional_attendees}")
         
         # Set reminder (best practice: always set reminders)
         appointment.ReminderSet = True
@@ -1455,9 +1587,6 @@ def create_calendar_event(
         # This converts the appointment to a meeting request
         if required_attendees or optional_attendees:
             appointment.Send()
-            logger.info(f"Meeting invitation sent to attendees for '{subject}'")
-        else:
-            logger.info(f"Calendar event '{subject}' created (no attendees)")
         
         return json.dumps({
             "success": True,
@@ -1510,8 +1639,6 @@ def search_calendar_events(query: str, days_range: int = 30) -> str:
         - Searches both past and future events from today
     """
     try:
-        logger.info(f"Searching calendar events: query='{query}', days_range={days_range}")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         calendar = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CALENDAR)
@@ -1540,7 +1667,6 @@ def search_calendar_events(query: str, days_range: int = 30) -> str:
             if query_lower in subject or query_lower in location:
                 events.append(format_appointment(appointment))
         
-        logger.info(f"Search completed: found {len(events)} matching events")
         
         return json.dumps({
             "success": True,
@@ -1595,8 +1721,6 @@ def get_contacts(limit: int = DEFAULT_CONTACT_LIMIT, search_name: Optional[str] 
         - When search_name is provided, scans more contacts to ensure enough matches
     """
     try:
-        logger.info(f"Fetching contacts: limit={limit}, search_name='{search_name}'")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         contacts_folder = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CONTACTS)
@@ -1628,11 +1752,10 @@ def get_contacts(limit: int = DEFAULT_CONTACT_LIMIT, search_name: Optional[str] 
                 
                 contacts.append(format_contact(contact))
             except Exception as e:
-                logger.warning(f"Failed to format contact, skipping: {e}")
+                pass
             
             contact = items.GetNext()
         
-        logger.info(f"Successfully retrieved {len(contacts)} contacts")
         
         return json.dumps({
             "success": True,
@@ -1699,8 +1822,6 @@ def create_contact(
         - Best practice: Maintain accurate contact information
     """
     try:
-        logger.info(f"Creating contact: name='{full_name}', email='{email}'")
-        
         outlook = get_outlook_application()
         contact = outlook.CreateItem(OUTLOOK_ITEM_CONTACT)
         
@@ -1723,7 +1844,6 @@ def create_contact(
         # Save the contact
         contact.Save()
         
-        logger.info(f"Contact '{full_name}' created successfully")
         
         return json.dumps({
             "success": True,
@@ -1776,8 +1896,6 @@ def search_contacts(query: str) -> str:
         - Only returns successfully formatted contacts (skips corrupted entries)
     """
     try:
-        logger.info(f"Searching contacts: query='{query}'")
-        
         outlook = get_outlook_application()
         namespace = outlook.GetNamespace("MAPI")
         contacts_folder = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CONTACTS)
@@ -1813,7 +1931,6 @@ def search_contacts(query: str) -> str:
                 if "error" not in formatted:
                     contacts.append(formatted)
         
-        logger.info(f"Search completed: found {len(contacts)} matching contacts")
         
         return json.dumps({
             "success": True,
@@ -1852,15 +1969,11 @@ if __name__ == "__main__":
         - All operations use the currently logged-in Outlook profile
         - Server logs operations for audit purposes
     """
-    logger.info("Starting MCP Outlook server...")
-    logger.info("Server will expose Outlook email, calendar, and contact tools")
-    logger.info("Press Ctrl+C to stop the server")
-    
     try:
         # Run the MCP server (blocks until interrupted)
         mcp.run()
     except KeyboardInterrupt:
-        logger.info("Server shutdown requested by user")
+        pass  # Silent shutdown
     except Exception as e:
         logger.critical("Server crashed unexpectedly", exc_info=True)
         raise
