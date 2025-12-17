@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2025-12-17
+
+### Added
+- **MCP Resources for Live Monitoring** (3 new resources)
+  - `outlook://inbox/unread-count` - Real-time unread email count monitoring
+  - `outlook://inbox/recent` - 5 most recent emails snapshot
+  - `outlook://calendar/today` - Today's calendar events overview
+  - Resources allow AI assistants to subscribe and monitor Outlook state changes
+  - Efficient implementation with performance limits (max 100 unread, 5 recent emails)
+
+### Changed
+- **Logging Improvements**
+  - Restored INFO logging level (was CRITICAL)
+  - Added success log messages for all major operations:
+    - Email sent successfully
+    - Draft email created
+    - Email with attachments sent
+    - Calendar events created
+    - Email preferences learned
+    - Resource access logged
+  - MCP/FastMCP loggers kept at WARNING level to reduce noise
+  - Improved log format with timestamps
+
 ## [1.2.2] - 2025-12-17
 
 ### Added

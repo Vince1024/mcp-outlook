@@ -11,6 +11,7 @@ Features:
     - Contact management: Read, create, and search contacts
     - Out-of-Office management: Get and set automatic reply settings
     - User preferences detection: Automatically learn email formatting preferences from sent emails
+    - Live monitoring: MCP Resources for real-time Outlook state (unread count, recent emails, today's events)
 
 Requirements:
     - Microsoft Outlook installed and configured on Windows
@@ -28,7 +29,7 @@ Security Notes:
     - No credentials are logged or transmitted
     - Email body content is truncated in responses to prevent data leakage
     
-Version: 1.2.2
+Version: 1.2.3
 """
 
 import json
@@ -44,23 +45,21 @@ from fastmcp import FastMCP
 # CONFIGURATION AND CONSTANTS
 # ============================================================================
 
-# Configure logging - completely silent
+# Configure logging
 logging.basicConfig(
-    level=logging.CRITICAL,  # Only critical errors
-    format='%(message)s',
-    handlers=[logging.NullHandler()]  # No output
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Set our logger to CRITICAL (completely silent)
+# Set our logger to INFO
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.INFO)
 
-# Silence all MCP/FastMCP related loggers completely
+# Silence verbose MCP/FastMCP related loggers (keep WARNING and above)
 for logger_name in ['mcp', 'FastMCP', 'fastmcp', 'mcp.server', 'fastmcp.server', 
                      'mcp.client', 'fastmcp.client', 'asyncio', '__main__']:
-    logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-    logging.getLogger(logger_name).addHandler(logging.NullHandler())
-    logging.getLogger(logger_name).propagate = False
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 # Initialize FastMCP server
 mcp = FastMCP("outlook")
@@ -757,6 +756,8 @@ def send_email(
         # Send the email
         mail.Send()
         
+        logger.info(f"Email sent successfully to {to}")
+        
         return json.dumps({
             "success": True,
             "message": f"Email sent to {to}"
@@ -836,6 +837,8 @@ def create_draft_email(
         
         # Save as draft (does not send)
         mail.Save()
+        
+        logger.info(f"Draft email created for {to}")
         
         return json.dumps({
             "success": True,
@@ -1089,6 +1092,8 @@ def send_email_with_attachments(
         
         # Send the email
         mail.Send()
+        
+        logger.info(f"Email with {attachments_added} attachment(s) sent successfully to {to}")
         
         return json.dumps({
             "success": True,
@@ -1754,6 +1759,9 @@ def create_calendar_event(
         # This converts the appointment to a meeting request
         if required_attendees or optional_attendees:
             appointment.Send()
+            logger.info(f"Calendar event '{subject}' created and invitations sent")
+        else:
+            logger.info(f"Calendar event '{subject}' created")
         
         return json.dumps({
             "success": True,
@@ -2805,6 +2813,8 @@ def learn_user_email_preferences(sample_size: int = 3) -> str:
         metrics_with_data = sum([1 for c in [font_confidence, color_confidence, size_confidence] if c > 0])
         overall_confidence = (font_confidence + color_confidence + size_confidence) / metrics_with_data if metrics_with_data > 0 else 0
         
+        logger.info(f"Email preferences learned from {analyzed} emails: {most_common_font[0]}, {most_common_color[0]}, {most_common_size[0]}")
+        
         return json.dumps({
             "success": True,
             "preferences": {
@@ -2824,6 +2834,175 @@ def learn_user_email_preferences(sample_size: int = 3) -> str:
     except Exception as e:
         logger.error("Failed to learn user preferences", exc_info=True)
         return json.dumps({"success": False, "error": str(e)})
+
+
+# ============================================================================
+# MCP RESOURCES (Live State Monitoring)
+# ============================================================================
+
+@mcp.resource("outlook://inbox/unread-count")
+def get_unread_count_resource() -> str:
+    """
+    MCP Resource: Get current count of unread emails in Inbox.
+    
+    This resource can be subscribed to by AI assistants to monitor
+    unread email count in real-time.
+    
+    Returns:
+        JSON string with:
+        - count: Number of unread emails
+        - timestamp: Current timestamp
+        - last_updated: Time of last check
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        inbox = namespace.GetDefaultFolder(OUTLOOK_FOLDER_INBOX)
+        
+        # Count unread items
+        items = inbox.Items
+        unread_items = items.Restrict("[Unread] = True")
+        
+        # Get count efficiently without iterating
+        unread_count = 0
+        item = unread_items.GetFirst()
+        while item is not None:
+            unread_count += 1
+            item = unread_items.GetNext()
+            if unread_count > 100:  # Limit for performance
+                break
+        
+        logger.info(f"Unread count resource accessed: {unread_count} unread email(s)")
+        
+        return json.dumps({
+            "count": unread_count,
+            "timestamp": datetime.now().isoformat(),
+            "folder": "Inbox"
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to get unread count resource", exc_info=True)
+        return json.dumps({
+            "count": 0,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        })
+
+
+@mcp.resource("outlook://inbox/recent")
+def get_recent_emails_resource() -> str:
+    """
+    MCP Resource: Get 5 most recent emails from Inbox.
+    
+    This resource provides a quick snapshot of recent emails
+    for monitoring and notification purposes.
+    
+    Returns:
+        JSON string with list of recent emails (simplified format)
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        inbox = namespace.GetDefaultFolder(OUTLOOK_FOLDER_INBOX)
+        
+        items = inbox.Items
+        items.Sort("[ReceivedTime]", True)
+        
+        recent_emails = []
+        count = 0
+        item = items.GetFirst()
+        
+        while item is not None and count < 5:
+            try:
+                recent_emails.append({
+                    "subject": item.Subject[:50] if item.Subject else "(No subject)",
+                    "sender": item.SenderName if hasattr(item, 'SenderName') else "Unknown",
+                    "received": item.ReceivedTime.strftime("%Y-%m-%d %H:%M:%S") if hasattr(item, 'ReceivedTime') else None,
+                    "unread": item.UnRead if hasattr(item, 'UnRead') else False
+                })
+                count += 1
+            except:
+                pass
+            
+            item = items.GetNext()
+        
+        logger.info(f"Recent emails resource accessed: {len(recent_emails)} recent email(s)")
+        
+        return json.dumps({
+            "recent_emails": recent_emails,
+            "count": len(recent_emails),
+            "timestamp": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to get recent emails resource", exc_info=True)
+        return json.dumps({
+            "recent_emails": [],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        })
+
+
+@mcp.resource("outlook://calendar/today")
+def get_today_events_resource() -> str:
+    """
+    MCP Resource: Get today's calendar events.
+    
+    This resource provides a snapshot of today's schedule
+    for quick reference and monitoring.
+    
+    Returns:
+        JSON string with today's events
+    """
+    try:
+        outlook = get_outlook_application()
+        namespace = outlook.GetNamespace("MAPI")
+        calendar = namespace.GetDefaultFolder(OUTLOOK_FOLDER_CALENDAR)
+        
+        # Get today's date range
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + timedelta(days=1)
+        
+        items = calendar.Items
+        items.Sort("[Start]")
+        items.IncludeRecurrences = True
+        
+        # Filter for today
+        filter_str = f"[Start] >= '{today_start.strftime('%m/%d/%Y %H:%M %p')}' AND [Start] < '{today_end.strftime('%m/%d/%Y %H:%M %p')}'"
+        filtered_items = items.Restrict(filter_str)
+        
+        events = []
+        item = filtered_items.GetFirst()
+        
+        while item is not None:
+            try:
+                events.append({
+                    "subject": item.Subject if hasattr(item, 'Subject') else "(No subject)",
+                    "start": item.Start.strftime("%H:%M") if hasattr(item, 'Start') else None,
+                    "end": item.End.strftime("%H:%M") if hasattr(item, 'End') else None,
+                    "location": item.Location if hasattr(item, 'Location') else ""
+                })
+            except:
+                pass
+            
+            item = filtered_items.GetNext()
+        
+        logger.info(f"Today events resource accessed: {len(events)} event(s) for {today_start.strftime('%Y-%m-%d')}")
+        
+        return json.dumps({
+            "events": events,
+            "count": len(events),
+            "date": today_start.strftime("%Y-%m-%d"),
+            "timestamp": datetime.now().isoformat()
+        }, indent=2)
+        
+    except Exception as e:
+        logger.error("Failed to get today events resource", exc_info=True)
+        return json.dumps({
+            "events": [],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        })
 
 
 # ============================================================================

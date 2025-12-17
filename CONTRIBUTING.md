@@ -79,7 +79,7 @@ What actually happens.
 - OS: Windows 10/11
 - Outlook Version: 2016/2019/365
 - Python Version: 3.10/3.11/3.12
-- MCP Outlook Version: 1.2.2
+- MCP Outlook Version: 1.2.3
 
 **Logs/Screenshots**
 Output of `python tests/test_connection.py` and error messages.
@@ -610,5 +610,5 @@ Your name will be added to the acknowledgments section in the README!
 
 Every contribution, small or large, makes a difference.
 
-**Version**: 1.2.2  
+**Version**: 1.2.3  
 **Last Updated**: December 17, 2025

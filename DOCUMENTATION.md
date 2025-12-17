@@ -1,6 +1,6 @@
 # Complete Documentation - MCP Outlook
 
-Complete technical documentation for MCP Outlook v1.2.2
+Complete technical documentation for MCP Outlook v1.2.3
 
 ## Table of Contents
 
@@ -12,6 +12,7 @@ Complete technical documentation for MCP Outlook v1.2.2
 - [Contact Tools](#contact-tools)
 - [Folder Tools](#folder-tools)
 - [Out-of-Office Tools](#out-of-office-tools)
+- [MCP Resources](#mcp-resources)
 - [Error Handling](#error-handling)
 - [Performance](#performance)
 - [Security](#security)
@@ -1426,6 +1427,135 @@ EMAIL_BODY_PREVIEW_LENGTH = 500  # Limited to 500 characters
 
 ---
 
+## MCP Resources
+
+MCP Resources provide **real-time monitoring** of Outlook state. Unlike tools (which require explicit calls), resources can be **subscribed to** by AI assistants for automatic updates.
+
+### `outlook://inbox/unread-count`
+
+Monitor unread email count in real-time.
+
+**Returns:**
+```json
+{
+  "count": 5,
+  "timestamp": "2025-12-17T23:02:17.056827",
+  "folder": "Inbox"
+}
+```
+
+**Use Cases:**
+- Notify user when new emails arrive
+- Display unread count in status bar
+- Trigger workflows based on email volume
+
+**Performance:**
+- Limits to 100 unread emails for performance
+- Efficient iteration using GetFirst()/GetNext()
+
+---
+
+### `outlook://inbox/recent`
+
+Get snapshot of 5 most recent emails.
+
+**Returns:**
+```json
+{
+  "recent_emails": [
+    {
+      "subject": "Q1 Budget Review",
+      "sender": "Jane Smith",
+      "received": "2025-12-17 14:30:00",
+      "unread": true
+    }
+  ],
+  "count": 5,
+  "timestamp": "2025-12-17T23:02:17.073138"
+}
+```
+
+**Use Cases:**
+- Quick inbox preview
+- Email monitoring dashboard
+- Recent activity notifications
+
+**Notes:**
+- Subject truncated to 50 characters
+- Only 5 most recent emails
+- Sorted by received time (newest first)
+
+---
+
+### `outlook://calendar/today`
+
+Get today's calendar events overview.
+
+**Returns:**
+```json
+{
+  "events": [
+    {
+      "subject": "Team Standup",
+      "start": "09:00",
+      "end": "09:30",
+      "location": "Conference Room A"
+    },
+    {
+      "subject": "Lunch time",
+      "start": "12:30",
+      "end": "13:30",
+      "location": ""
+    }
+  ],
+  "count": 2,
+  "date": "2025-12-17",
+  "timestamp": "2025-12-17T23:02:17.441827"
+}
+```
+
+**Use Cases:**
+- Daily schedule overview
+- Meeting reminders
+- Time management assistance
+
+**Notes:**
+- Includes recurring events
+- Only today's events (00:00 to 23:59)
+- Sorted by start time
+
+---
+
+### How to Use Resources
+
+Resources are accessed differently than tools:
+
+**In MCP Clients (Cursor/Claude):**
+```
+# Subscribe to a resource
+cursor.subscribe("outlook://inbox/unread-count")
+
+# Client will be notified when state changes
+```
+
+**Direct Access (Python):**
+```python
+from outlook_mcp import get_unread_count_resource
+
+# Get current state
+state = get_unread_count_resource()
+```
+
+**Logging:**
+All resource accesses are logged:
+```
+2025-12-17 23:02:17 - outlook_mcp - INFO - Unread count resource accessed: 5 unread email(s)
+2025-12-17 23:02:17 - outlook_mcp - INFO - Recent emails resource accessed: 5 recent email(s)
+2025-12-17 23:02:17 - outlook_mcp - INFO - Today events resource accessed: 2 event(s) for 2025-12-17
+```
+
+---
+
 ## Limitations
 
 ### Platform
@@ -1497,7 +1627,7 @@ When creating an issue, include:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed history.
 
-### Current Version: 1.2.2
+### Current Version: 1.2.3
 
 **Latest Changes**:
 - All documentation translated to English
@@ -1564,7 +1694,7 @@ IMPORTANCE_HIGH = 2
 
 ---
 
-**Version**: 1.2.2  
+**Version**: 1.2.3  
 **Date**: December 17, 2025  
 **Author**: MCP Outlook Contributors  
 **License**: MIT

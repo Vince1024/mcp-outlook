@@ -9,7 +9,7 @@
 
 A Model Context Protocol (MCP) server for Microsoft Outlook integration.
 
-**Version**: 1.2.2 | **Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) | **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) | **Examples**: [EXAMPLES.md](EXAMPLES.md)
+**Version**: 1.2.3 | **Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md) | **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md) | **Examples**: [EXAMPLES.md](EXAMPLES.md)
 
 ## Overview
 
@@ -20,6 +20,7 @@ This MCP server provides AI assistants with the ability to interact with Microso
 - **Contact Management**: View, create, and search contacts
 - **Out-of-Office Management**: Configure automatic reply settings
 - **User Preferences Detection**: Automatically learn email formatting preferences from sent emails
+- **Live Monitoring**: Real-time Outlook state via MCP Resources (unread count, recent emails, today's events)
 
 ## Features
 
@@ -61,6 +62,12 @@ This MCP server provides AI assistants with the ability to interact with Microso
 - `get_out_of_office_settings` - Get current automatic reply settings
 - `set_out_of_office` - Configure automatic replies (immediate or scheduled)
 - `disable_out_of_office` - Disable automatic replies
+
+### MCP Resources ([Documentation](DOCUMENTATION.md#mcp-resources))
+
+- `outlook://inbox/unread-count` - Real-time unread email count
+- `outlook://inbox/recent` - 5 most recent emails
+- `outlook://calendar/today` - Today's calendar events
 
 ## Performance Optimizations
 
