@@ -1,79 +1,79 @@
-# Guide de Contribution - MCP Outlook
+# Contributing Guide - MCP Outlook
 
-Merci de votre intérêt pour contribuer à MCP Outlook ! Ce guide vous aidera à participer au projet.
+Thank you for your interest in contributing to MCP Outlook! This guide will help you participate in the project.
 
-## Table des Matières
+## Table of Contents
 
-- [Code de Conduite](#code-de-conduite)
-- [Comment Contribuer](#comment-contribuer)
-- [Setup Développement](#setup-développement)
-- [Standards de Code](#standards-de-code)
-- [Process de Pull Request](#process-de-pull-request)
+- [Code of Conduct](#code-of-conduct)
+- [How to Contribute](#how-to-contribute)
+- [Development Setup](#development-setup)
+- [Code Standards](#code-standards)
+- [Pull Request Process](#pull-request-process)
 - [Roadmap](#roadmap)
 
 ---
 
-## Code de Conduite
+## Code of Conduct
 
-### Notre Engagement
+### Our Pledge
 
-Nous nous engageons à faire de la participation à ce projet une expérience sans harcèlement pour tous, indépendamment de :
-- L'âge
-- La taille corporelle
-- Le handicap
-- L'ethnicité
-- L'identité et l'expression de genre
-- Le niveau d'expérience
-- La nationalité
-- L'apparence personnelle
-- La race
-- La religion
-- L'identité et l'orientation sexuelles
+We are committed to making participation in this project a harassment-free experience for everyone, regardless of:
+- Age
+- Body size
+- Disability
+- Ethnicity
+- Gender identity and expression
+- Level of experience
+- Nationality
+- Personal appearance
+- Race
+- Religion
+- Sexual identity and orientation
 
-### Comportements Attendus
+### Expected Behaviors
 
-- Utiliser un langage accueillant et inclusif
-- Respecter les points de vue et expériences différents
-- Accepter gracieusement les critiques constructives
-- Se concentrer sur ce qui est le mieux pour la communauté
-- Faire preuve d'empathie envers les autres membres
+- Use welcoming and inclusive language
+- Respect differing viewpoints and experiences
+- Gracefully accept constructive criticism
+- Focus on what is best for the community
+- Show empathy towards other community members
 
-### Comportements Inacceptables
+### Unacceptable Behaviors
 
-- L'utilisation de langage ou d'images sexualisés
-- Les commentaires trolls, insultants ou dérogatoires
-- Le harcèlement public ou privé
-- La publication d'informations privées sans permission explicite
-- Toute autre conduite inappropriée dans un cadre professionnel
+- Use of sexualized language or imagery
+- Trolling, insulting or derogatory comments
+- Public or private harassment
+- Publishing others' private information without explicit permission
+- Other conduct inappropriate in a professional setting
 
 ---
 
-## Comment Contribuer
+## How to Contribute
 
-### Signaler des Bugs
+### Reporting Bugs
 
-Avant de créer une issue :
+Before creating an issue:
 
-1. **Vérifiez les issues existantes** pour éviter les doublons
-2. **Testez avec la dernière version**
-3. **Reproduisez le bug** de manière fiable
+1. **Check existing issues** to avoid duplicates
+2. **Test with latest version**
+3. **Reproduce the bug** reliably
 
-#### Template d'Issue pour Bug
+#### Bug Issue Template
 
 ```markdown
-**Description du Bug**
-Description claire et concise du bug.
+**Bug Description**
+Clear and concise description of the bug.
 
 **Steps to Reproduce**
-1. Aller à '...'
-2. Cliquer sur '...'
-3. Voir l'erreur
+1. Go to '...'
+2. Click on '...'
+3. See error
 
-**Comportement Attendu**
-Ce qui devrait se passer.
+**Expected Behavior**
+What should happen.
 
-**Comportement Actuel**
-Ce qui se passe réellement.
+**Actual Behavior**
+What actually happens.
 
 **Environment**
 - OS: Windows 10/11
@@ -82,181 +82,181 @@ Ce qui se passe réellement.
 - MCP Outlook Version: 1.2.0
 
 **Logs/Screenshots**
-Output de `python tests/test_connection.py` et messages d'erreur.
+Output of `python tests/test_connection.py` and error messages.
 
-**Contexte Additionnel**
-Toute autre information pertinente.
+**Additional Context**
+Any other relevant information.
 ```
 
-### Proposer des Nouvelles Fonctionnalités
+### Proposing New Features
 
-#### Template d'Issue pour Feature
+#### Feature Issue Template
 
 ```markdown
-**Problème/Besoin**
-Décrivez le problème ou le besoin que cette feature résoudrait.
+**Problem/Need**
+Describe the problem or need this feature would solve.
 
-**Solution Proposée**
-Décrivez la solution que vous envisagez.
+**Proposed Solution**
+Describe the solution you envision.
 
-**Alternatives Considérées**
-Autres approches que vous avez envisagées.
+**Alternatives Considered**
+Other approaches you've considered.
 
 **Impact**
-- Sur les utilisateurs existants
-- Sur les performances
-- Sur la compatibilité
+- On existing users
+- On performance
+- On compatibility
 
-**Implémentation**
-Sketch de l'implémentation si vous avez des idées.
+**Implementation**
+Implementation sketch if you have ideas.
 ```
 
-### Améliorer la Documentation
+### Improving Documentation
 
-La documentation est aussi importante que le code !
+Documentation is as important as code!
 
-Contributions bienvenues :
-- Corriger les fautes de frappe/grammaire
-- Ajouter des exemples
-- Clarifier les explications
-- Traduire (si multilingue à l'avenir)
+Contributions welcome:
+- Fix typos/grammar
+- Add examples
+- Clarify explanations
+- Translate (if multilingual in future)
 
 ---
 
-## Setup Développement
+## Development Setup
 
-### Prérequis
+### Prerequisites
 
 - **Windows 10/11**
-- **Microsoft Outlook** installé et configuré
+- **Microsoft Outlook** installed and configured
 - **Python 3.10+**
-- **Git** pour le contrôle de version
+- **Git** for version control
 
 ### Installation
 
 ```bash
-# 1. Fork le projet sur GitHub
+# 1. Fork the project on GitHub
 
-# 2. Cloner votre fork
+# 2. Clone your fork
 git clone https://github.com/YOUR_USERNAME/mcp-outlook.git
 cd mcp-outlook
 
-# 3. Ajouter le remote upstream
+# 3. Add upstream remote
 git remote add upstream https://github.com/ORIGINAL_OWNER/mcp-outlook.git
 
-# 4. Créer un environnement virtuel
+# 4. Create a virtual environment
 python -m venv venv
-venv\Scripts\activate  # Sur Windows
+venv\Scripts\activate  # On Windows
 
-# 5. Installer les dépendances
+# 5. Install dependencies
 pip install -r requirements.txt
 
-# 6. Installer les dépendances de développement
+# 6. Install development dependencies
 pip install pytest black ruff
 
-# 7. Vérifier l'installation
+# 7. Verify installation
 python tests/test_connection.py
 ```
 
-### Structure du Projet
+### Project Structure
 
 ```
 mcp-outlook/
 ├── src/
 │   ├── __init__.py
-│   └── outlook_mcp.py       # Serveur MCP principal
+│   └── outlook_mcp.py       # Main MCP server
 ├── tests/
 │   ├── __init__.py
-│   ├── test_connection.py   # Test de connexion Outlook
-│   ├── test_outlook_mcp.py  # Tests unitaires
-│   ├── test_advanced.py     # Tests avancés
-│   └── test_tools.py        # Tests des outils
-├── docs/                    # Documentation (si nécessaire)
+│   ├── test_connection.py   # Outlook connection test
+│   ├── test_outlook_mcp.py  # Unit tests
+│   ├── test_advanced.py     # Advanced tests
+│   └── test_tools.py        # Tool tests
+├── docs/                    # Documentation (if needed)
 ├── .gitignore
 ├── pyproject.toml
 ├── requirements.txt
 ├── README.md
 ├── DOCUMENTATION.md
-├── CONTRIBUTING.md          # Ce fichier
+├── CONTRIBUTING.md          # This file
 ├── CHANGELOG.md
 └── LICENSE
 ```
 
 ---
 
-## Standards de Code
+## Code Standards
 
-### Style Python
+### Python Style
 
-Ce projet suit **PEP 8** avec quelques ajustements :
+This project follows **PEP 8** with some adjustments:
 
 ```python
-# Longueur de ligne : 100 caractères (pas 79)
-# Utiliser Black pour le formatage automatique
+# Line length: 100 characters (not 79)
+# Use Black for automatic formatting
 
-# Bon
+# Good
 def my_function(param1: str, param2: int = 10) -> str:
     """
-    Description de la fonction.
+    Function description.
     
     Args:
-        param1: Description du paramètre 1
-        param2: Description du paramètre 2 (default: 10)
+        param1: Description of parameter 1
+        param2: Description of parameter 2 (default: 10)
     
     Returns:
-        Description du retour
+        Description of return value
     """
     return f"{param1}: {param2}"
 
-# Mauvais
+# Bad
 def myFunction(p1,p2=10):
     return f"{p1}: {p2}"
 ```
 
-### Outils de Qualité
+### Quality Tools
 
-#### Black (Formatage Automatique)
+#### Black (Automatic Formatting)
 
 ```bash
-# Formater tout le code
+# Format all code
 black src/ tests/
 
-# Vérifier sans modifier
+# Check without modifying
 black --check src/ tests/
 ```
 
 #### Ruff (Linter)
 
 ```bash
-# Linter
+# Lint
 ruff check src/ tests/
 
 # Auto-fix
 ruff check --fix src/ tests/
 ```
 
-### Conventions de Nommage
+### Naming Conventions
 
 ```python
-# Variables et fonctions : snake_case
+# Variables and functions: snake_case
 user_name = "John"
 def get_inbox_emails(): ...
 
-# Classes : PascalCase
+# Classes: PascalCase
 class EmailManager: ...
 
-# Constantes : UPPER_SNAKE_CASE
+# Constants: UPPER_SNAKE_CASE
 MAX_EMAIL_LIMIT = 50
 OUTLOOK_FOLDER_INBOX = 6
 
-# Privé : préfixe _
+# Private: _ prefix
 _FOLDER_CACHE = {}
 def _get_folder_by_path(): ...
 ```
 
 ### Docstrings
 
-Utilisez le style **Google** :
+Use **Google** style:
 
 ```python
 def send_email(
@@ -301,7 +301,7 @@ def send_email(
 
 ### Type Hints
 
-Utilisez les type hints partout :
+Use type hints everywhere:
 
 ```python
 from typing import Optional, Dict, Any, List
@@ -318,10 +318,10 @@ def get_inbox_emails(
     ...
 ```
 
-### Gestion des Erreurs
+### Error Handling
 
 ```python
-# Retour JSON cohérent
+# Consistent JSON return
 try:
     # Code
     return json.dumps({
@@ -341,7 +341,7 @@ except Exception as e:
 
 ### Tests
 
-Chaque nouvelle feature doit avoir des tests :
+Each new feature must have tests:
 
 ```python
 # tests/test_new_feature.py
@@ -362,47 +362,47 @@ def test_new_function_error():
 
 ---
 
-## Process de Pull Request
+## Pull Request Process
 
-### Workflow Git
+### Git Workflow
 
 ```bash
-# 1. Synchroniser avec upstream
+# 1. Sync with upstream
 git fetch upstream
 git checkout main
 git merge upstream/main
 
-# 2. Créer une branche pour votre feature
+# 2. Create a branch for your feature
 git checkout -b feature/my-awesome-feature
-# OU
+# OR
 git checkout -b fix/bug-description
 
-# 3. Faire vos modifications
-# Éditez les fichiers...
+# 3. Make your changes
+# Edit files...
 
-# 4. Tester
+# 4. Test
 python tests/test_connection.py
 pytest tests/
 
-# 5. Formater et linter
+# 5. Format and lint
 black src/ tests/
 ruff check --fix src/ tests/
 
 # 6. Commit
 git add .
 git commit -m "feat: add awesome feature"
-# OU
+# OR
 git commit -m "fix: resolve bug with email attachments"
 
 # 7. Push
 git push origin feature/my-awesome-feature
 
-# 8. Créer une Pull Request sur GitHub
+# 8. Create a Pull Request on GitHub
 ```
 
-### Convention de Commit
+### Commit Convention
 
-Utilisez **Conventional Commits** :
+Use **Conventional Commits**:
 
 ```
 <type>(<scope>): <description>
@@ -414,16 +414,16 @@ Utilisez **Conventional Commits** :
 
 #### Types
 
-- `feat`: Nouvelle fonctionnalité
-- `fix`: Correction de bug
-- `docs`: Documentation seulement
-- `style`: Formatage, indentation (pas de changement de code)
-- `refactor`: Refactoring (pas de nouvelle feature ni fix)
-- `perf`: Amélioration de performance
-- `test`: Ajout ou correction de tests
-- `chore`: Maintenance (dépendances, config, etc.)
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Formatting, indentation (no code change)
+- `refactor`: Refactoring (no new feature or fix)
+- `perf`: Performance improvement
+- `test`: Adding or fixing tests
+- `chore`: Maintenance (dependencies, config, etc.)
 
-#### Exemples
+#### Examples
 
 ```bash
 feat(email): add support for HTML email attachments
@@ -435,55 +435,55 @@ test(email): add tests for send_email with attachments
 chore(deps): update pywin32 to v306
 ```
 
-### Checklist Pull Request
+### Pull Request Checklist
 
-Avant de soumettre une PR, vérifiez :
+Before submitting a PR, check:
 
-- [ ] Le code suit les standards de style (Black + Ruff)
-- [ ] Les tests passent (`pytest tests/`)
-- [ ] Les nouveaux tests sont ajoutés pour les nouvelles features
-- [ ] La documentation est mise à jour (README, DOCUMENTATION, CHANGELOG)
-- [ ] Les docstrings sont complètes
-- [ ] Pas de code commenté ou de debug prints
-- [ ] Les commits suivent Conventional Commits
-- [ ] La PR a une description claire
+- [ ] Code follows style standards (Black + Ruff)
+- [ ] Tests pass (`pytest tests/`)
+- [ ] New tests added for new features
+- [ ] Documentation updated (README, DOCUMENTATION, CHANGELOG)
+- [ ] Docstrings are complete
+- [ ] No commented code or debug prints
+- [ ] Commits follow Conventional Commits
+- [ ] PR has clear description
 
-### Template de Pull Request
+### Pull Request Template
 
 ```markdown
 ## Description
 
-Brève description des changements.
+Brief description of changes.
 
-## Type de Changement
+## Type of Change
 
-- [ ] Bug fix (changement non-breaking qui corrige une issue)
-- [ ] New feature (changement non-breaking qui ajoute une fonctionnalité)
-- [ ] Breaking change (fix ou feature qui casserait des fonctionnalités existantes)
+- [ ] Bug fix (non-breaking change that fixes an issue)
+- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Breaking change (fix or feature that would break existing functionality)
 - [ ] Documentation update
 
-## Comment Tester
+## How to Test
 
 1. Step 1
 2. Step 2
-3. Résultat attendu
+3. Expected result
 
 ## Checklist
 
-- [ ] Mon code suit les standards du projet
-- [ ] J'ai effectué une auto-review de mon code
-- [ ] J'ai commenté le code dans les parties difficiles
-- [ ] J'ai mis à jour la documentation
-- [ ] Mes changements ne génèrent pas de nouveaux warnings
-- [ ] J'ai ajouté des tests qui prouvent que mon fix/feature fonctionne
-- [ ] Les tests unitaires passent localement
-- [ ] J'ai mis à jour le CHANGELOG.md
+- [ ] My code follows project standards
+- [ ] I performed a self-review of my code
+- [ ] I commented code in difficult parts
+- [ ] I updated documentation
+- [ ] My changes generate no new warnings
+- [ ] I added tests that prove my fix/feature works
+- [ ] Unit tests pass locally
+- [ ] I updated CHANGELOG.md
 
-## Screenshots (si applicable)
+## Screenshots (if applicable)
 
 ![Screenshot](url)
 
-## Issues Liées
+## Related Issues
 
 Fixes #123
 Relates to #456
@@ -493,25 +493,25 @@ Relates to #456
 
 ## Roadmap
 
-Consultez le [CHANGELOG.md](CHANGELOG.md) pour la roadmap complète.
+See [CHANGELOG.md](CHANGELOG.md) for complete roadmap.
 
-### Priorités Actuelles
+### Current Priorities
 
 #### High Priority
-- [ ] Gestion des tâches (tasks)
-- [ ] Gestion des dossiers (create, move, delete)
-- [ ] Filtres avancés (flags, categories)
+- [ ] Task management
+- [ ] Folder management (create, move, delete)
+- [ ] Advanced filters (flags, categories)
 
 #### Medium Priority
-- [ ] Gestion des règles emails (create, modify, delete)
-- [ ] Prévisualisation de pièces jointes
-- [ ] Opérations en batch
+- [ ] Email rules management (create, modify, delete)
+- [ ] Attachment preview
+- [ ] Batch operations
 
 #### Low Priority
-- [ ] Support cross-platform (explore alternatives MAPI)
-- [ ] Interface web (optionnel)
+- [ ] Cross-platform support (explore MAPI alternatives)
+- [ ] Web interface (optional)
 
-### Features Completed
+### Completed Features
 
 - [x] Email management (v1.0.0)
 - [x] Calendar management (v1.0.0)
@@ -525,46 +525,46 @@ Consultez le [CHANGELOG.md](CHANGELOG.md) pour la roadmap complète.
 
 ---
 
-## Questions Fréquentes
+## Frequently Asked Questions
 
-### Q: Mon PR a été rejeté, que faire ?
+### Q: My PR was rejected, what should I do?
 
-**R**: Ne vous découragez pas ! Lisez les commentaires des reviewers, effectuez les modifications demandées, et re-soumettez. C'est un processus d'apprentissage.
+**A**: Don't get discouraged! Read the reviewers' comments, make the requested changes, and resubmit. It's a learning process.
 
-### Q: Je ne sais pas par où commencer ?
+### Q: I don't know where to start?
 
-**R**: Regardez les issues étiquetées `good first issue` ou `help wanted`. Ce sont de bons points de départ pour les nouveaux contributeurs.
+**A**: Look for issues tagged `good first issue` or `help wanted`. These are good starting points for new contributors.
 
-### Q: Je peux contribuer sans savoir coder ?
+### Q: Can I contribute without coding?
 
-**R**: Absolument ! Vous pouvez :
-- Améliorer la documentation
-- Traduire (si multilingue)
-- Signaler des bugs
-- Suggérer des améliorations
-- Aider d'autres utilisateurs dans les issues
+**A**: Absolutely! You can:
+- Improve documentation
+- Translate (if multilingual)
+- Report bugs
+- Suggest improvements
+- Help other users in issues
 
-### Q: Comment tester mes changements ?
+### Q: How do I test my changes?
 
-**R**: 
-1. Exécutez `python tests/test_connection.py` pour les tests basiques
-2. Exécutez `pytest tests/` pour tous les tests
-3. Testez manuellement avec un vrai Outlook
-4. Vérifiez que les fonctionnalités existantes marchent toujours
+**A**: 
+1. Run `python tests/test_connection.py` for basic tests
+2. Run `pytest tests/` for all tests
+3. Test manually with a real Outlook
+4. Check that existing functionality still works
 
-### Q: Mes tests échouent, que faire ?
+### Q: My tests fail, what should I do?
 
-**R**: 
-1. Lisez les messages d'erreur attentivement
-2. Vérifiez qu'Outlook est en cours d'exécution
-3. Vérifiez votre environnement Python
-4. Demandez de l'aide dans l'issue ou la PR
+**A**: 
+1. Read error messages carefully
+2. Check that Outlook is running
+3. Check your Python environment
+4. Ask for help in the issue or PR
 
 ---
 
-## Ressources
+## Resources
 
-### Documentation Externe
+### External Documentation
 
 - **Python**: https://docs.python.org/3/
 - **FastMCP**: https://github.com/jlowin/fastmcp
@@ -572,44 +572,43 @@ Consultez le [CHANGELOG.md](CHANGELOG.md) pour la roadmap complète.
 - **Outlook COM API**: https://docs.microsoft.com/en-us/office/vba/api/overview/outlook
 - **Model Context Protocol**: https://modelcontextprotocol.io
 
-### Documentation du Projet
+### Project Documentation
 
-- [README.md](README.md) - Vue d'ensemble
-- [DOCUMENTATION.md](DOCUMENTATION.md) - Documentation technique complète
-- [QUICK_START.md](QUICK_START.md) - Guide de démarrage rapide
-- [EXAMPLES.md](EXAMPLES.md) - Exemples d'utilisation
-- [CHANGELOG.md](CHANGELOG.md) - Historique des versions
+- [README.md](README.md) - Overview
+- [DOCUMENTATION.md](DOCUMENTATION.md) - Complete technical documentation
+- [QUICK_START.md](QUICK_START.md) - Quick start guide
+- [EXAMPLES.md](EXAMPLES.md) - Usage examples
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ---
 
-## Remerciements
+## Acknowledgments
 
-Merci à tous les contributeurs qui ont fait de MCP Outlook ce qu'il est aujourd'hui !
+Thank you to all contributors who have made MCP Outlook what it is today!
 
-### Comment Être Listé
+### How to Be Listed
 
-Si vous contribuez de manière significative :
-- Bug fixes importants
-- Nouvelles features
-- Améliorations de documentation
-- Aide à la communauté
+If you contribute significantly:
+- Important bug fixes
+- New features
+- Documentation improvements
+- Community help
 
-Votre nom sera ajouté à la section remerciements dans le README !
+Your name will be added to the acknowledgments section in the README!
 
 ---
 
 ## Contact
 
-- **Issues GitHub**: [Créer une issue](https://github.com/YOUR_USERNAME/mcp-outlook/issues)
+- **GitHub Issues**: [Create an issue](https://github.com/YOUR_USERNAME/mcp-outlook/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/YOUR_USERNAME/mcp-outlook/discussions)
-- **Email**: Pour les questions sensibles uniquement
+- **Email**: For sensitive questions only
 
 ---
 
-**Merci de contribuer à MCP Outlook !** 
+**Thank you for contributing to MCP Outlook!** 
 
-Chaque contribution, petite ou grande, fait une différence.
+Every contribution, small or large, makes a difference.
 
-**Version**: 1.2.0  
-**Dernière mise à jour**: 17 décembre 2025
-
+**Version**: 1.2.1  
+**Last Updated**: December 17, 2025
